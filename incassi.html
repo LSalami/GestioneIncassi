@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestione Incassi Giornalieri</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"
+      rel="stylesheet" />
+    <link rel="icon" href="data:," />
+    <style>
+      .incassi-del-giorno {
+        margin-top: 30px;
+      }
+      .table-container {
+        padding-bottom: 30px;
+      }
+
+      .alert {
+        animation: fade-out 3s forwards;
+      }
+
+      @keyframes fade-out {
+        0% {
+          opacity: 1;
+        }
+        90% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container mt-5">
+      <div class="d-flex justify-content-between align-items-center">
+        <h1>Gestione Incassi Giornalieri</h1>
+        <div>
+          <input
+            type="text"
+            id="calendar"
+            class="form-control"
+            placeholder="Seleziona una data" />
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-between align-items-center mt-3">
+        <h2><span id="current-date"></span></h2>
+        <h2>Totale: €<span id="totale" class="text-primary"></span></h2>
+      </div>
+
+      <form id="incasso-form" class="row g-3 needs-validation mt-2" novalidate>
+        <div class="col-md-6">
+          <label for="importo" class="form-label">Importo (€)</label>
+          <input
+            type="text"
+            class="form-control"
+            id="importo"
+            placeholder="Inserisci importo"
+            required
+            oninput="validateImporto(this)" />
+          <div id="importo-error" class="invalid-feedback">
+            Inserisci un importo valido e positivo.
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <label for="tipo-pagamento" class="form-label"
+            >Tipo di Pagamento</label
+          >
+          <select class="form-select" id="tipo-pagamento" required>
+            <option value="" selected hidden>Seleziona...</option>
+            <option value="Contanti">Contanti</option>
+            <option value="POS">POS</option>
+          </select>
+          <div id="tipo-pagamento-error" class="invalid-feedback">
+            Seleziona un tipo di pagamento.
+          </div>
+        </div>
+
+        <div class="col-md-12">
+          <label for="cliente" class="form-label">Cliente</label>
+          <input
+            type="text"
+            class="form-control"
+            id="cliente"
+            placeholder="Es. Mario Rossi" />
+        </div>
+
+        <div class="col-md-12">
+          <label for="annotazioni" class="form-label">Annotazioni</label>
+          <textarea
+            class="form-control"
+            id="annotazioni"
+            placeholder="Es. Pagamento anticipato"></textarea>
+        </div>
+
+        <div class="col-md-12">
+          <label for="operatore" class="form-label">Operatore</label>
+          <select class="form-select" id="operatore" required>
+            <option value="" selected hidden>Seleziona...</option>
+            <option value="Alessandra">Alessandra</option>
+            <option value="Francesco">Francesco</option>
+          </select>
+          <div id="operatore-error" class="invalid-feedback">
+            Seleziona un operatore.
+          </div>
+        </div>
+
+        <div class="col-md-12">
+          <button class="btn btn-primary" type="submit">Salva</button>
+        </div>
+      </form>
+      <div class="response"></div>
+
+      <div class="incassi-del-giorno">
+        <h3>Incassi del Giorno</h3>
+        <div class="table-container">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>Importo (€)</th>
+                <th>Tipo Pagamento</th>
+                <th>Cliente</th>
+                <th>Annotazioni</th>
+                <th>Operatore</th>
+              </tr>
+            </thead>
+            <tbody id="incassi-list"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="confirm-modal"
+      class="modal fade"
+      tabindex="-1"
+      role="dialog"
+      aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Conferma Dati</h5>
+          </div>
+          <div class="modal-body" id="modal-content"></div>
+          <div class="modal-footer">
+            <button id="cancel-button" class="btn btn-secondary me-2">
+              Annulla
+            </button>
+            <button id="confirm-button" class="btn btn-primary">
+              Conferma
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/it.js"></script>
+    <script>
+      // Validazione con Bootstrap
+      (() => {
+        "use strict";
+
+        // Fetch all the forms we want to apply custom Bootstrap validation styles to
+        const forms = document.querySelectorAll(".needs-validation");
+
+        // Loop over them and prevent submission
+        Array.from(forms).forEach((form) => {
+          form.addEventListener(
+            "submit",
+            (event) => {
+              if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+              } else {
+                event.preventDefault(); // Evita la ricarica della pagina
+                salvaIncasso(); // Salva i dati
+              }
+
+              form.classList.add("was-validated");
+            },
+            false
+          );
+        });
+      })();
+
+      // Funzione per ottenere i dati dal form
+      function getFormData() {
+        return {
+          importo: document.getElementById("importo").value,
+          tipoPagamento: document.getElementById("tipo-pagamento").value,
+          cliente: document.getElementById("cliente").value,
+          annotazioni: document.getElementById("annotazioni").value,
+          operatore: document.getElementById("operatore").value,
+        };
+      }
+
+      function showFieldError(fieldId, errorId, message) {
+        const field = document.getElementById(fieldId);
+        const error = document.getElementById(errorId);
+
+        // Aggiunge la classe di errore
+        field.classList.add("is-invalid");
+        error.innerText = message;
+        error.classList.remove("d-none");
+      }
+
+      function clearFieldError(fieldId, errorId) {
+        const field = document.getElementById(fieldId);
+        const error = document.getElementById(errorId);
+
+        if (!field) {
+          console.error(`Campo con ID '${fieldId}' non trovato.`);
+          return;
+        }
+        if (!error) {
+          console.error(`Errore con ID '${errorId}' non trovato.`);
+          return;
+        }
+
+        // Rimuove la classe di errore
+        field.classList.remove("is-invalid");
+        error.classList.add("d-none");
+        error.innerText = "";
+      }
+
+      function validateImporto(input) {
+        input.value = input.value
+          .replace(/[^0-9.,]/g, "") // Solo numeri, punto e virgola
+          .replace(/,/g, ".") // Converte la virgola in punto
+          .replace(/(\..*?)\..*/g, "$1") // Rimuove ulteriori punti
+          .replace(/^0+(?!\.|$)/, "") // Rimuove zeri iniziali
+          .replace(/(\.\d{2}).*/, "$1"); // Limita a due decimali
+
+        if (parseFloat(input.value) <= 0 || isNaN(parseFloat(input.value))) {
+          showFieldError(
+            "importo",
+            "importo-error",
+            "Inserisci un importo valido e positivo."
+          );
+        } else {
+          clearFieldError("importo", "importo-error");
+        }
+      }
+
+      // Funzione per mostrare il messaggio di successo
+      function showSuccessMessage(message) {
+        const responseContainer = document.querySelector(".response");
+        responseContainer.innerHTML = ""; // Rimuove i messaggi precedenti
+        const successMessage = document.createElement("div");
+        successMessage.className = "alert alert-success mt-3";
+        successMessage.innerText = message;
+        responseContainer.appendChild(successMessage);
+        setTimeout(() => successMessage.remove(), 3000);
+      }
+
+      // Funzione per mostrare il modal di conferma
+      function showConfirmModal(contentHTML, onConfirm) {
+        const modalElement = new bootstrap.Modal(
+          document.getElementById("confirm-modal")
+        );
+        document.getElementById("modal-content").innerHTML = contentHTML;
+        const confirmButton = document.getElementById("confirm-button");
+        const cancelButton = document.getElementById("cancel-button");
+
+        confirmButton.onclick = () => {
+          modalElement.hide();
+          onConfirm();
+        };
+
+        cancelButton.onclick = () => {
+          modalElement.hide();
+        };
+
+        modalElement.show();
+      }
+
+      // Funzione per salvare l'incasso
+      function salvaIncasso() {
+        const { importo, tipoPagamento, cliente, annotazioni, operatore } =
+          getFormData();
+
+        let hasError = false;
+
+        // Validazione Importo
+        const importoNumerico = parseFloat(importo);
+        if (isNaN(importoNumerico) || importoNumerico <= 0) {
+          showFieldError(
+            "importo",
+            "importo-error",
+            "Inserisci un importo valido e positivo."
+          );
+          hasError = true;
+        } else {
+          clearFieldError("importo", "importo-error");
+        }
+
+        // Validazione Tipo Pagamento
+        if (!tipoPagamento) {
+          showFieldError(
+            "tipo-pagamento",
+            "tipo-pagamento-error",
+            "Seleziona un tipo di pagamento."
+          );
+          hasError = true;
+        } else {
+          clearFieldError("tipo-pagamento", "tipo-pagamento-error");
+        }
+
+        // Validazione Operatore
+        if (!operatore) {
+          showFieldError(
+            "operatore",
+            "operatore-error",
+            "Seleziona un operatore."
+          );
+          hasError = true;
+        } else {
+          clearFieldError("operatore", "operatore-error");
+        }
+
+        // Interrompi se ci sono errori
+        if (hasError) {
+          return;
+        }
+
+        // Prosegui con il salvataggio
+        const currentDate = new Date().toLocaleDateString("it-IT", {
+          weekday: "long",
+          day: "2-digit",
+          month: "long",
+          year: "numeric",
+        });
+
+        const datiConferma = `
+        <ul>
+          <li><strong>Data:</strong> ${currentDate}</li>
+          <li><strong>Importo:</strong> € ${importoNumerico.toFixed(2)}</li>
+          <li><strong>Tipo Pagamento:</strong> ${tipoPagamento}</li>
+          <li><strong>Cliente:</strong> ${cliente || "Non specificato"}</li>
+          <li><strong>Annotazioni:</strong> ${
+            annotazioni || "Non specificato"
+          }</li>
+          <li><strong>Operatore:</strong> ${operatore}</li>
+        </ul>`;
+
+        showConfirmModal(datiConferma, () => {
+          salvataggioSuStorage({
+            importo: importoNumerico,
+            tipoPagamento,
+            cliente,
+            annotazioni,
+            operatore,
+          });
+        });
+      }
+
+      // Funzione per salvare i dati nel localStorage
+      function salvataggioSuStorage(dati) {
+        const currentDateISO = new Date().toISOString().split("T")[0];
+        let data;
+
+        try {
+          data = JSON.parse(localStorage.getItem("incassi")) || {};
+        } catch (error) {
+          console.error("Errore nel parsing del localStorage:", error);
+          data = {};
+        }
+
+        if (!data[currentDateISO]) {
+          data[currentDateISO] = [];
+        }
+
+        data[currentDateISO].push({
+          importo: parseFloat(dati.importo), // Conversione sicura a numero
+          tipoPagamento: dati.tipoPagamento,
+          cliente: dati.cliente,
+          annotazioni: dati.annotazioni,
+          operatore: dati.operatore,
+        });
+
+        localStorage.setItem("incassi", JSON.stringify(data));
+        showSuccessMessage("Salvato con successo!");
+        caricaIncassi(currentDateISO);
+
+        // Reset dei campi senza triggerare errori
+        const fieldsToReset = [
+          "importo",
+          "tipo-pagamento",
+          "cliente",
+          "annotazioni",
+          "operatore",
+        ];
+        fieldsToReset.forEach((fieldId) => {
+          const field = document.getElementById(fieldId);
+          field.value = "";
+          field.classList.remove("is-invalid", "was-validated"); // Rimuove errori
+        });
+
+        // Rimuove la classe 'was-validated' dal form
+        const form = document.getElementById("incasso-form");
+        form.classList.remove("was-validated");
+      }
+
+      // Funzione per caricare gli incassi
+      function caricaIncassi(date) {
+        let data;
+
+        try {
+          data = JSON.parse(localStorage.getItem("incassi")) || {};
+        } catch (error) {
+          console.error(
+            "Errore nel parsing del localStorage. Dati corrotti:",
+            error
+          );
+          data = {};
+        }
+
+        const incassi = data[date] || [];
+        const totale = incassi.reduce(
+          (acc, curr) => acc + (parseFloat(curr.importo) || 0),
+          0
+        );
+
+        const list = document.getElementById("incassi-list");
+        list.innerHTML = "";
+
+        incassi.reverse().forEach((incasso) => {
+          const importo = parseFloat(incasso.importo) || 0; // Conversione sicura
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>€ ${importo.toFixed(2)}</td>
+            <td>${incasso.tipoPagamento || "-"}</td>
+            <td>${incasso.cliente || "-"}</td>
+            <td>${incasso.annotazioni || "-"}</td>
+            <td>${incasso.operatore || "-"}</td>
+        `;
+          list.appendChild(row);
+        });
+
+        document.getElementById("totale").innerText = totale.toFixed(2);
+      }
+
+      // Gestione iniziale della pagina
+      document.addEventListener("DOMContentLoaded", function () {
+        const today = new Date();
+        const formattedToday = today.toISOString().split("T")[0];
+
+        function formatDateToItalian(date) {
+          const formattedDate = date.toLocaleDateString("it-IT", {
+            weekday: "long",
+            day: "2-digit",
+            month: "long",
+            year: "numeric",
+          });
+          return formattedDate
+            .split(" ")
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(" ");
+        }
+
+        document.getElementById("current-date").innerText =
+          formatDateToItalian(today);
+
+        flatpickr("#calendar", {
+          altInput: true,
+          altFormat: "l, j M Y",
+          dateFormat: "Y-m-d",
+          defaultDate: formattedToday,
+          locale: "it",
+          onChange: function (selectedDates, dateStr) {
+            const selectedDate = selectedDates[0];
+            if (selectedDate) {
+              const formattedDate = formatDateToItalian(selectedDate);
+              document.getElementById("current-date").innerText = formattedDate;
+              toggleFormVisibility(dateStr);
+              caricaIncassi(dateStr);
+            }
+          },
+        });
+
+        toggleFormVisibility(formattedToday);
+        caricaIncassi(formattedToday);
+      });
+
+      // Mostra o nasconde il form di inserimento incassi
+      function toggleFormVisibility(selectedDate) {
+        if (!selectedDate) {
+          console.warn("Nessuna data selezionata.");
+          return;
+        }
+
+        const form = document.getElementById("incasso-form");
+        if (!form) {
+          console.error("Il form con ID 'incasso-form' non esiste.");
+          return;
+        }
+
+        const currentDate = new Date().toISOString().split("T")[0];
+        form.classList.toggle("d-none", selectedDate !== currentDate);
+      }
+    </script>
+  </body>
+</html>
