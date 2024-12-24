@@ -12,13 +12,6 @@
       rel="stylesheet" />
     <link rel="icon" href="data:," />
     <style>
-      .incassi-del-giorno {
-        margin-top: 30px;
-      }
-      .table-container {
-        padding-bottom: 30px;
-      }
-
       .alert {
         animation: fade-out 3s forwards;
       }
@@ -118,7 +111,7 @@
       </form>
       <div class="response"></div>
 
-      <div class="incassi-del-giorno">
+      <div class="mt-4 mb-4">
         <h3>Incassi del Giorno</h3>
         <div class="table-container">
           <table class="table table-striped">
@@ -457,8 +450,7 @@
           month: "2-digit",
           day: "2-digit",
         }).split("/").reverse().join("-");
-        console.log(formattedToday);
-
+        
         function formatDateToItalian(date) {
           const formattedDate = date.toLocaleDateString("it-IT", {
             weekday: "long",
