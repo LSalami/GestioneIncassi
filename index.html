@@ -452,8 +452,12 @@
       // Gestione iniziale della pagina
       document.addEventListener("DOMContentLoaded", function () {
         const today = new Date();
-        const formattedToday = today.toISOString().split("T")[0];
-        console.log(today.toISOString());
+        const formattedToday = today.toLocaleDateString("it-IT", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        }).split("/").reverse().join("-");
+        console.log(formattedToday);
 
         function formatDateToItalian(date) {
           const formattedDate = date.toLocaleDateString("it-IT", {
