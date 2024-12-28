@@ -14,8 +14,7 @@
       rel="icon"
       type="image/png"
       sizes="100x100"
-      href="https://img.icons8.com/office/100/money-bag-euro.png"
-     />   
+      href="https://img.icons8.com/office/100/money-bag-euro.png" />
     <style>
       .alert {
         animation: fade-out 3s forwards;
@@ -49,7 +48,16 @@
 
       <div class="d-flex justify-content-between align-items-center mt-3">
         <h2><span id="current-date"></span></h2>
-        <h2>Totale: €<span id="totale" class="text-primary"></span></h2>
+        <h2>
+          Totale Cassa: €<span id="totale-cassa" class="text-primary"
+            >0.00</span
+          >
+        </h2>
+      </div>
+
+      <div class="d-flex justify-content-between mt-3">
+        <h4>Totale Contanti: €<span id="totale-contanti">0.00</span></h4>
+        <h4>Totale POS: €<span id="totale-pos">0.00</span></h4>
       </div>
 
       <form id="incasso-form" class="row g-3 needs-validation mt-2" novalidate>
@@ -64,6 +72,29 @@
             oninput="validateImporto(this)" />
           <div id="importo-error" class="invalid-feedback">
             Inserisci un importo valido e positivo.
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Tipo</label>
+          <div class="form-check">
+            <input
+              class="form-check-input"
+              type="radio"
+              name="tipo-incasso"
+              id="radio-entrate"
+              value="entrate"
+              checked />
+            <label class="form-check-label" for="radio-entrate">Entrate</label>
+          </div>
+          <div class="form-check">
+            <input
+              class="form-check-input"
+              type="radio"
+              name="tipo-incasso"
+              id="radio-uscite"
+              value="uscite" />
+            <label class="form-check-label" for="radio-uscite">Uscite</label>
           </div>
         </div>
 
@@ -103,12 +134,12 @@
           <select class="form-select" id="operatore" required>
             <option value="" selected hidden>Seleziona...</option>
             <option value="Alessandra">Alessandra</option>
-						<option value="Federica">Federica</option>
+            <option value="Federica">Federica</option>
             <option value="Francesco">Francesco</option>
-						<option value="Graziella">Graziella</option>
-						<option value="Ilaria">Ilaria</option>
-						<option value="Nicolò">Nicolò</option>
-						<option value="Tommaso">Tommaso</option>
+            <option value="Graziella">Graziella</option>
+            <option value="Ilaria">Ilaria</option>
+            <option value="Nicolò">Nicolò</option>
+            <option value="Tommaso">Tommaso</option>
           </select>
           <div id="operatore-error" class="invalid-feedback">
             Seleziona un operatore.
@@ -119,6 +150,7 @@
           <button class="btn btn-primary" type="submit">Salva</button>
         </div>
       </form>
+
       <div class="response"></div>
 
       <div class="mt-4 mb-4">
@@ -203,6 +235,8 @@
           cliente: document.getElementById("cliente").value,
           annotazioni: document.getElementById("annotazioni").value,
           operatore: document.getElementById("operatore").value,
+          tipo: document.querySelector('input[name="tipo-incasso"]:checked')
+            .value,
         };
       }
 
@@ -365,6 +399,30 @@
           });
         });
       }
+      // Funzione per aggiornare il totale degli incassi
+      function aggiornaTotali(incassi) {
+        let totaleCassa = 0,
+          totaleContanti = 0,
+          totalePOS = 0;
+
+        incassi.forEach((incasso) => {
+          const importo = parseFloat(incasso.importo);
+          if (incasso.tipo === "uscite") totaleCassa -= importo;
+          else totaleCassa += importo;
+
+          if (incasso.tipoPagamento === "Contanti") {
+            totaleContanti += incasso.tipo === "uscite" ? -importo : importo;
+          } else if (incasso.tipoPagamento === "POS") {
+            totalePOS += incasso.tipo === "uscite" ? -importo : importo;
+          }
+        });
+
+        document.getElementById("totale-cassa").innerText =
+          totaleCassa.toFixed(2);
+        document.getElementById("totale-contanti").innerText =
+          totaleContanti.toFixed(2);
+        document.getElementById("totale-pos").innerText = totalePOS.toFixed(2);
+      }
 
       // Funzione per salvare i dati nel localStorage
       function salvataggioSuStorage(dati) {
@@ -388,6 +446,7 @@
           cliente: dati.cliente,
           annotazioni: dati.annotazioni,
           operatore: dati.operatore,
+          tipo: dati.tipo, // Entrata o uscita
         });
 
         localStorage.setItem("incassi", JSON.stringify(data));
@@ -404,8 +463,12 @@
         ];
         fieldsToReset.forEach((fieldId) => {
           const field = document.getElementById(fieldId);
-          field.value = "";
-          field.classList.remove("is-invalid", "was-validated"); // Rimuove errori
+          if (field.type === "radio") {
+            field.checked = field.id === "radio-entrate"; // Default su Entrate
+          } else {
+            field.value = "";
+          }
+          field.classList.remove("is-invalid", "was-validated");
         });
 
         // Rimuove la classe 'was-validated' dal form
@@ -415,52 +478,61 @@
 
       // Funzione per caricare gli incassi
       function caricaIncassi(date) {
-        let data;
-
-        try {
-          data = JSON.parse(localStorage.getItem("incassi")) || {};
-        } catch (error) {
-          console.error(
-            "Errore nel parsing del localStorage. Dati corrotti:",
-            error
-          );
-          data = {};
-        }
-
+        const data = JSON.parse(localStorage.getItem("incassi")) || {};
         const incassi = data[date] || [];
-        const totale = incassi.reduce(
-          (acc, curr) => acc + (parseFloat(curr.importo) || 0),
-          0
-        );
+
+        let totaleCassa = 0;
+        let totaleContanti = 0;
+        let totalePOS = 0;
+
+        incassi.forEach((incasso) => {
+          const importo = parseFloat(incasso.importo);
+          if (incasso.tipo === "uscite") {
+            totaleCassa -= importo;
+            if (incasso.tipoPagamento === "Contanti") totaleContanti -= importo;
+            else if (incasso.tipoPagamento === "POS") totalePOS -= importo;
+          } else {
+            totaleCassa += importo;
+            if (incasso.tipoPagamento === "Contanti") totaleContanti += importo;
+            else if (incasso.tipoPagamento === "POS") totalePOS += importo;
+          }
+        });
+
+        document.getElementById("totale-cassa").innerText =
+          totaleCassa.toFixed(2);
+        document.getElementById("totale-contanti").innerText =
+          totaleContanti.toFixed(2);
+        document.getElementById("totale-pos").innerText = totalePOS.toFixed(2);
 
         const list = document.getElementById("incassi-list");
         list.innerHTML = "";
 
-        incassi.reverse().forEach((incasso) => {
-          const importo = parseFloat(incasso.importo) || 0; // Conversione sicura
+        incassi.forEach((incasso) => {
           const row = document.createElement("tr");
           row.innerHTML = `
-            <td>€ ${importo.toFixed(2)}</td>
-            <td>${incasso.tipoPagamento || "-"}</td>
-            <td>${incasso.cliente || "-"}</td>
-            <td>${incasso.annotazioni || "-"}</td>
-            <td>${incasso.operatore || "-"}</td>
-        `;
+      <td>€ ${parseFloat(incasso.importo).toFixed(2)}</td>
+      <td>${incasso.tipoPagamento}</td>
+      <td>${incasso.cliente || "-"}</td>
+      <td>${incasso.annotazioni || "-"}</td>
+      <td>${incasso.operatore}</td>
+    `;
           list.appendChild(row);
         });
-
-        document.getElementById("totale").innerText = totale.toFixed(2);
       }
 
       // Gestione iniziale della pagina
       document.addEventListener("DOMContentLoaded", function () {
         const today = new Date();
-        const formattedToday = today.toLocaleDateString("it-IT", {
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-        }).split("/").reverse().join("-");
-        
+        const formattedToday = today
+          .toLocaleDateString("it-IT", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+          })
+          .split("/")
+          .reverse()
+          .join("-");
+
         function formatDateToItalian(date) {
           const formattedDate = date.toLocaleDateString("it-IT", {
             weekday: "long",
