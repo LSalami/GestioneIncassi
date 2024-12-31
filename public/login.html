@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&family=Lexend:wght@100;200;300;400;500;600;700;800;900&display=swap"
+      rel="stylesheet" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet" />
+    <link rel="stylesheet" href="/css/login.css" />
+  </head>
+  <body>
+    <div class="main-content-container">
+      <div class="text-container">
+        <div class="font-h2-strong">Inserisci il tuo codice di accesso</div>
+      </div>
+
+      <div id="otp-input" class="font-h2-strong">
+        <input
+          class="font-h2-strong"
+          placeholder="_"
+          type="text"
+          pattern="\d*"
+          maxlength="1"
+          autocomplete="off" />
+        <input
+          class="font-h2-strong"
+          placeholder="_"
+          type="text"
+          pattern="\d*"
+          maxlength="1"
+          autocomplete="off" />
+        <input
+          class="font-h2-strong"
+          placeholder="_"
+          type="text"
+          pattern="\d*"
+          maxlength="1"
+          autocomplete="off" />
+        <input
+          class="font-h2-strong"
+          placeholder="_"
+          type="text"
+          pattern="\d*"
+          maxlength="1"
+          autocomplete="off" />
+        <input
+          class="font-h2-strong"
+          placeholder="_"
+          type="text"
+          pattern="\d*"
+          maxlength="1"
+          autocomplete="off" />
+        <input
+          class="font-h2-strong"
+          placeholder="_"
+          type="text"
+          pattern="\d*"
+          maxlength="1"
+          autocomplete="off" />
+      </div>
+
+      <button id="submit">Accedi</button>
+    </div>
+
+    <!-- Modale Bootstrap -->
+    <div
+      class="modal fade"
+      id="error-modal"
+      tabindex="-1"
+      aria-labelledby="errorModalLabel"
+      aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="errorModalLabel">Errore</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Chiudi"></button>
+          </div>
+          <div class="modal-body">Codice non valido! Verifica e riprova.</div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal">
+              Chiudi
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/login.js"></script>
+  </body>
+</html>

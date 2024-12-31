@@ -61,7 +61,7 @@
       </div>
 
       <form id="incasso-form" class="row g-3 needs-validation mt-2" novalidate>
-        <div class="col-md-6">
+        <div class="col-md-4">
           <label for="importo" class="form-label">Importo (€)</label>
           <input
             type="text"
@@ -75,7 +75,9 @@
           </div>
         </div>
 
-        <div class="col-md-6">
+        <div class="col-md-1"></div>
+
+        <div class="col-md-2">
           <label class="form-label">Tipo</label>
           <div class="form-check">
             <input
@@ -98,7 +100,57 @@
           </div>
         </div>
 
-        <div class="col-md-6">
+        <div class="col-md-2">
+          <label class="form-label">Tipo di Pagamento</label>
+          <div class="form-check">
+            <input
+              class="form-check-input"
+              type="radio"
+              name="tipo-pagamento"
+              id="radio-contanti"
+              value="contanti"
+              checked />
+            <label class="form-check-label" for="radio-contanti"
+              >Contanti</label
+            >
+          </div>
+          <div class="form-check">
+            <input
+              class="form-check-input"
+              type="radio"
+              name="tipo-pagamento"
+              id="radio-pos"
+              value="pos" />
+            <label class="form-check-label" for="radio-pos">POS</label>
+          </div>
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label">Tipo di documento</label>
+          <div class="form-check">
+            <input
+              class="form-check-input"
+              type="radio"
+              name="tipo-documento"
+              id="radio-fattura"
+              value="fattura"
+              checked />
+            <label class="form-check-label" for="radio-fattura">Fattura</label>
+          </div>
+          <div class="form-check">
+            <input
+              class="form-check-input"
+              type="radio"
+              name="tipo-documento"
+              id="radio-scontrino"
+              value="scontrino" />
+            <label class="form-check-label" for="radio-scontrino"
+              >Scontrino</label
+            >
+          </div>
+        </div>
+
+        <!-- <div class="col-md-6">
           <label for="tipo-pagamento" class="form-label"
             >Tipo di Pagamento</label
           >
@@ -110,24 +162,24 @@
           <div id="tipo-pagamento-error" class="invalid-feedback">
             Seleziona un tipo di pagamento.
           </div>
-        </div>
+        </div> -->
 
         <div class="col-md-12">
-          <label for="cliente" class="form-label">Cliente</label>
+          <label for="descrizione" class="form-label">Descrizione</label>
           <input
             type="text"
             class="form-control"
-            id="cliente"
-            placeholder="Es. Mario Rossi" />
+            id="descrizione"
+            placeholder="Inserire numero pratica" />
         </div>
 
-        <div class="col-md-12">
+        <!-- <div class="col-md-12">
           <label for="annotazioni" class="form-label">Annotazioni</label>
           <textarea
             class="form-control"
             id="annotazioni"
             placeholder="Es. Bollo"></textarea>
-        </div>
+        </div> -->
 
         <div class="col-md-12">
           <label for="operatore" class="form-label">Operatore</label>
@@ -160,9 +212,10 @@
             <thead>
               <tr>
                 <th>Importo (€)</th>
-                <th>Tipo Pagamento</th>
-                <th>Cliente</th>
-                <th>Annotazioni</th>
+                <th>Tipo</th>
+                <th>Pagamento</th>
+                <th>Documento</th>
+                <th>Descrizione</th>
                 <th>Operatore</th>
               </tr>
             </thead>
@@ -230,13 +283,19 @@
       // Funzione per ottenere i dati dal form
       function getFormData() {
         return {
-          importo: document.getElementById("importo").value,
-          tipoPagamento: document.getElementById("tipo-pagamento").value,
-          cliente: document.getElementById("cliente").value,
-          annotazioni: document.getElementById("annotazioni").value,
-          operatore: document.getElementById("operatore").value,
+          importo: parseFloat(document.getElementById("importo").value) || 0,
           tipo: document.querySelector('input[name="tipo-incasso"]:checked')
             .value,
+          tipoPagamento: document.querySelector(
+            'input[name="tipo-pagamento"]:checked'
+          ).value,
+          tipoDocumento: document.querySelector(
+            'input[name="tipo-documento"]:checked'
+          ).value,
+          descrizione:
+            document.getElementById("descrizione").value || "Non specificato",
+          operatore:
+            document.getElementById("operatore").value || "Non specificato",
         };
       }
 
@@ -440,37 +499,14 @@
           data[currentDateISO] = [];
         }
 
-        data[currentDateISO].push({
-          importo: parseFloat(dati.importo), // Conversione sicura a numero
-          tipoPagamento: dati.tipoPagamento,
-          cliente: dati.cliente,
-          annotazioni: dati.annotazioni,
-          operatore: dati.operatore,
-          tipo: dati.tipo, // Entrata o uscita
-        });
+        data[currentDateISO].push(dati);
 
         localStorage.setItem("incassi", JSON.stringify(data));
         showSuccessMessage("Salvato con successo!");
         caricaIncassi(currentDateISO);
 
-        // Reset dei campi senza triggerare errori
-        const fieldsToReset = [
-          "importo",
-          "tipo-pagamento",
-          "cliente",
-          "annotazioni",
-          "operatore",
-        ];
-        fieldsToReset.forEach((fieldId) => {
-          const field = document.getElementById(fieldId);
-          if (field.type === "radio") {
-            field.checked = field.id === "radio-entrate"; // Default su Entrate
-          } else {
-            field.value = "";
-          }
-          field.classList.remove("is-invalid", "was-validated");
-        });
-
+        // Reset campi del form
+        document.getElementById("incasso-form").reset();
         // Rimuove la classe 'was-validated' dal form
         const form = document.getElementById("incasso-form");
         form.classList.remove("was-validated");
@@ -485,17 +521,32 @@
         let totaleContanti = 0;
         let totalePOS = 0;
 
+        const list = document.getElementById("incassi-list");
+        list.innerHTML = "";
+
         incassi.forEach((incasso) => {
           const importo = parseFloat(incasso.importo);
+          console.log(incasso.tipo);
           if (incasso.tipo === "uscite") {
             totaleCassa -= importo;
-            if (incasso.tipoPagamento === "Contanti") totaleContanti -= importo;
-            else if (incasso.tipoPagamento === "POS") totalePOS -= importo;
+            if (incasso.tipoPagamento === "contanti") totaleContanti -= importo;
+            else if (incasso.tipoPagamento === "pos") totalePOS -= importo;
           } else {
             totaleCassa += importo;
-            if (incasso.tipoPagamento === "Contanti") totaleContanti += importo;
-            else if (incasso.tipoPagamento === "POS") totalePOS += importo;
+            if (incasso.tipoPagamento === "contanti") totaleContanti += importo;
+            else if (incasso.tipoPagamento === "pos") totalePOS += importo;
           }
+
+          const row = document.createElement("tr");
+          row.innerHTML = `
+      <td>€ ${importo.toFixed(2)}</td>
+      <td>${incasso.tipo}</td>
+      <td>${incasso.tipoPagamento}</td>
+      <td>${incasso.tipoDocumento}</td>
+      <td>${incasso.descrizione}</td>
+      <td>${incasso.operatore}</td>
+    `;
+          list.appendChild(row);
         });
 
         document.getElementById("totale-cassa").innerText =
@@ -503,21 +554,6 @@
         document.getElementById("totale-contanti").innerText =
           totaleContanti.toFixed(2);
         document.getElementById("totale-pos").innerText = totalePOS.toFixed(2);
-
-        const list = document.getElementById("incassi-list");
-        list.innerHTML = "";
-
-        incassi.forEach((incasso) => {
-          const row = document.createElement("tr");
-          row.innerHTML = `
-      <td>€ ${parseFloat(incasso.importo).toFixed(2)}</td>
-      <td>${incasso.tipoPagamento}</td>
-      <td>${incasso.cliente || "-"}</td>
-      <td>${incasso.annotazioni || "-"}</td>
-      <td>${incasso.operatore}</td>
-    `;
-          list.appendChild(row);
-        });
       }
 
       // Gestione iniziale della pagina
