@@ -9,18 +9,31 @@ const PORT = 3000;
 // Configurazione sessione
 app.use(
   session({
-    secret: "chiave-segreta",
+    secret: "chiave-segreta", // Cambiare in produzione con una chiave complessa
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false, // Non crea sessioni non necessarie
+    cookie: {
+      secure: false, // Impostare su true in produzione con HTTPS
+      httpOnly: true, // Impedisce accessi JavaScript ai cookie
+      maxAge: 3600000, // Scadenza della sessione (1 ora)
+    },
   })
 );
 
 // Configurazione Body Parser
-app.use(bodyParser.urlencoded({ extended: true })); // Per dati inviati tramite moduli HTML (form)
+app.use(bodyParser.urlencoded({ extended: true })); // Per dati inviati tramite moduli HTML
 app.use(bodyParser.json()); // Per dati JSON inviati tramite Fetch API o altri client
 
-// Percorso statico per i file HTML
+// Percorso statico per i file HTML e JS
 app.use(express.static("public"));
+
+// Middleware per controllare l'autenticazione
+const requireAuth = (req, res, next) => {
+  if (!req.session.userId) {
+    return res.redirect("/login.html");
+  }
+  next();
+};
 
 // Rotte
 app.get("/", (req, res) => {
@@ -45,35 +58,32 @@ app.post("/register", async (req, res, next) => {
 });
 
 // Login
-app.post("/login", async (req, res, next) => {
+app.post("/login", async (req, res) => {
   const { codice_accesso } = req.body;
 
-  console.log("Codice di accesso ricevuto:", codice_accesso);
-
   try {
-    const query = `SELECT * FROM utenti WHERE codice_accesso = $1`;
+    const query =
+      "SELECT id, nome_utente FROM utenti WHERE codice_accesso = $1";
     const result = await pool.query(query, [codice_accesso]);
 
-    console.log("Risultato query:", result.rows);
-
-    const user = result.rows[0];
-    if (!user) {
-      console.log(
-        "Nessun utente trovato con il codice di accesso:",
-        codice_accesso
-      );
-      return res.status(401).json({
-        success: false,
-        message: "Utente non trovato. Riprova con un altro codice.",
-      });
+    if (result.rows.length === 0) {
+      return res
+        .status(401)
+        .json({ success: false, message: "Utente non trovato" });
     }
 
-    req.session.userId = user.id;
-    req.session.userPowerLevel = user.livello_potere;
-    res.json({ success: true, redirect: "/dashboard.html" });
-  } catch (err) {
-    console.error("Errore durante il login:", err.message);
-    next(err);
+    const { id, nome_utente } = result.rows[0];
+    req.session.userId = id; // Salva l'ID utente nella sessione
+    req.session.userName = nome_utente; // Salva il nome utente nella sessione
+
+    res.json({
+      success: true,
+      redirect: "/dashboard.html",
+      nomeUtente: nome_utente,
+    });
+  } catch (error) {
+    console.error("Errore durante il login:", error);
+    res.status(500).json({ success: false, message: "Errore del server" });
   }
 });
 
@@ -83,12 +93,23 @@ app.get("/logout", (req, res) => {
   res.redirect("/login.html");
 });
 
-// Dashboard
-app.get("/dashboard.html", (req, res) => {
+// Dashboard (controlla autenticazione)
+app.use(
+  "/dashboard.html",
+  requireAuth,
+  express.static("public/dashboard.html")
+);
+
+// Ritorna il nome utente dalla sessione
+app.get("/api/utente", (req, res) => {
   if (!req.session.userId) {
-    return res.redirect("/login.html");
+    return res.status(401).json({ success: false, message: "Non autenticato" });
   }
-  res.sendFile(__dirname + "/views/dashboard.html");
+  // aggiunta console log per debug
+  console.log("req.session.userId", req.session.userId);
+  console.log("req.session.userName", req.session.userName);
+
+  res.json({ success: true, userName: req.session.userName });
 });
 
 // Middleware per gestire gli errori

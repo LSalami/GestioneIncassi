@@ -31,21 +31,46 @@
           opacity: 0;
         }
       }
+
+      #user-info {
+        font-size: 1rem;
+        margin-right: 1rem;
+      }
+
+      #user-name {
+        color: #555; /* Colore per una visibilità chiara */
+      }
     </style>
   </head>
   <body>
-    <div class="container mt-5">
-      <div class="d-flex justify-content-between align-items-center">
-        <h1>Gestione Incassi Giornalieri</h1>
-        <div>
+    <div class="bg-light py-2 px-3 border-bottom">
+      <div class="d-flex align-items-center justify-content-between">
+        <!-- Titolo a sinistra -->
+        <div class="me-auto">
+          <h1 class="mb-0">Gestione Incassi Giornalieri</h1>
+        </div>
+
+        <!-- Calendario al centro -->
+        <div class="mx-auto">
           <input
             type="text"
             id="calendar"
-            class="form-control"
+            class="form-control text-center"
             placeholder="Seleziona una data" />
         </div>
-      </div>
 
+        <!-- Utente a destra -->
+        <div class="ms-auto">
+          <div id="user-info" class="text-end">
+            <span id="user-name" class="text-muted fw-bold"
+              >Utente non registrato</span
+            >
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="container mt-5">
       <div class="d-flex justify-content-between align-items-center mt-3">
         <h2><span id="current-date"></span></h2>
         <h2>
@@ -437,16 +462,16 @@
         });
 
         const datiConferma = `
-        <ul>
-          <li><strong>Data:</strong> ${currentDate}</li>
-          <li><strong>Importo:</strong> € ${importoNumerico.toFixed(2)}</li>
-          <li><strong>Tipo Pagamento:</strong> ${tipoPagamento}</li>
-          <li><strong>Cliente:</strong> ${cliente || "Non specificato"}</li>
-          <li><strong>Annotazioni:</strong> ${
-            annotazioni || "Non specificato"
-          }</li>
-          <li><strong>Operatore:</strong> ${operatore}</li>
-        </ul>`;
+            <ul>
+              <li><strong>Data:</strong> ${currentDate}</li>
+              <li><strong>Importo:</strong> € ${importoNumerico.toFixed(2)}</li>
+              <li><strong>Tipo Pagamento:</strong> ${tipoPagamento}</li>
+              <li><strong>Cliente:</strong> ${cliente || "Non specificato"}</li>
+              <li><strong>Annotazioni:</strong> ${
+                annotazioni || "Non specificato"
+              }</li>
+              <li><strong>Operatore:</strong> ${operatore}</li>
+            </ul>`;
 
         showConfirmModal(datiConferma, () => {
           salvataggioSuStorage({
@@ -539,13 +564,13 @@
 
           const row = document.createElement("tr");
           row.innerHTML = `
-      <td>€ ${importo.toFixed(2)}</td>
-      <td>${incasso.tipo}</td>
-      <td>${incasso.tipoPagamento}</td>
-      <td>${incasso.tipoDocumento}</td>
-      <td>${incasso.descrizione}</td>
-      <td>${incasso.operatore}</td>
-    `;
+          <td>€ ${importo.toFixed(2)}</td>
+          <td>${incasso.tipo}</td>
+          <td>${incasso.tipoPagamento}</td>
+          <td>${incasso.tipoDocumento}</td>
+          <td>${incasso.descrizione}</td>
+          <td>${incasso.operatore}</td>
+        `;
           list.appendChild(row);
         });
 
@@ -604,6 +629,28 @@
 
         toggleFormVisibility(formattedToday);
         caricaIncassi(formattedToday);
+
+        fetch("/api/utente")
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Non autenticato");
+            }
+            return response.json();
+          })
+          .then((data) => {
+            if (data.success) {
+              const userNameElement = document.getElementById("user-name");
+              userNameElement.textContent = `Utente registrato: ${data.userName}`;
+            }
+          })
+          .catch((error) => {
+            console.error(
+              "Errore durante il caricamento del nome utente:",
+              error
+            );
+            const userNameElement = document.getElementById("user-name");
+            userNameElement.textContent = "Utente non configurato";
+          });
       });
 
       // Mostra o nasconde il form di inserimento incassi

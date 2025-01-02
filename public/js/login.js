@@ -1,95 +1,91 @@
 window.addEventListener("load", function () {
-  const OTPContainer = document.querySelector("#otp-input");
-  const OTPValueContainer = document.querySelector("#otp-value");
+  const loginContainer = document.querySelector("#login-input");
   const continueButton = document.querySelector("#submit");
   const errorModalElement = document.getElementById("error-modal");
   const errorModal = new bootstrap.Modal(errorModalElement);
-  const inputs = Array.from(
-    OTPContainer.querySelectorAll("input:not(#otp-value)")
-  );
+  const userDisplay = document.getElementById("user-name");
+  const inputs = Array.from(loginContainer.querySelectorAll("input"));
 
-  const validCodes = {
-    123456: "Mario Rossi",
-    654321: "Luigi Bianchi",
-    130990: "Luca Baron",
-    151198: "Lorenzo Salami",
+  // Funzione per resettare gli input
+  const resetInputs = () => {
+    inputs.forEach((input) => {
+      input.value = ""; // Resetta i valori degli input
+    });
+    inputs[0].focus(); // Riporta il focus al primo input
   };
 
+  // Funzione per aggiornare l'utente registrato
+  const aggiornaUtenteRegistrato = (nomeUtente) => {
+    if (userDisplay) {
+      userDisplay.textContent = `Utente registrato: ${nomeUtente}`;
+    }
+  };
+
+  // Funzione per gestire il login
   const login = () => {
     // Combina i valori degli input in un unico codice
     const enteredCode = inputs.map((input) => input.value || "*").join("");
-    console.log("Codice OTP inserito:", enteredCode);
 
-    // Simula una chiamata al server o una verifica del database
-    fetch("/verify-otp", {
+    fetch("/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ otp: enteredCode }),
+      body: JSON.stringify({ codice_accesso: enteredCode }),
     })
       .then((response) => {
         if (!response.ok) {
-          throw new Error("Errore nella verifica del codice OTP.");
+          throw new Error("Errore nella verifica del codice di accesso.");
         }
         return response.json();
       })
       .then((data) => {
         if (data.success) {
           console.log("Login riuscito!");
-          window.location.href = data.redirectUrl || "/dashboard";
+          aggiornaUtenteRegistrato(data.nomeUtente); // Aggiorna il nome dell'utente registrato
+          window.location.href = data.redirect || "/dashboard"; // Reindirizza alla dashboard
         } else {
-          console.error("Codice OTP non valido.");
+          resetInputs(); // Cancella i valori degli input in caso di errore
           errorModal.show();
         }
       })
       .catch((error) => {
-        console.error("Errore durante la verifica:", error);
+        console.error("Errore durante il login:", error);
+        resetInputs(); // Cancella i valori degli input in caso di errore
         errorModal.show();
       });
   };
 
+  // Funzione per gestire gli eventi di input
   const handleInput = (input, curIndex) => {
-    input.value = input.value.replace(/\D/g, ""); // Permetti solo numeri
-    input.value = input.value.slice(-1); // Assicurati che ci sia solo un carattere
+    input.addEventListener("input", () => {
+      input.value = input.value.replace(/\D/g, "").slice(-1);
 
-    if (curIndex < inputs.length - 1 && input.value) {
-      inputs[curIndex + 1].focus(); // Passa all'input successivo
-    }
-  };
+      if (curIndex < inputs.length - 1 && input.value) {
+        inputs[curIndex + 1].focus();
+      }
+    });
 
-  inputs.forEach((input, index) => {
-    // Gestione dell'inserimento
-    input.addEventListener("input", () => handleInput(input, index));
-
-    // Gestione delle frecce destra/sinistra e altri tasti
     input.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         const allFilled = inputs.every((input) => input.value !== "");
-        console.log(allFilled);
-        allFilled ? login() : errorModal.show();
-      } else if (e.key === "Backspace" && !input.value && index > 0) {
-        const prevInput = inputs[index - 1];
+        if (allFilled) {
+          login();
+        } else {
+          resetInputs();
+          errorModal.show();
+        }
+      } else if (e.key === "Backspace" && !input.value && curIndex > 0) {
+        const prevInput = inputs[curIndex - 1];
         prevInput.focus();
-        setTimeout(() => {
-          prevInput.setSelectionRange(
-            prevInput.value.length,
-            prevInput.value.length
-          );
-        }, 0); // Posiziona il cursore alla fine
-      } else if (e.key === "ArrowRight" && index < inputs.length - 1) {
-        inputs[index + 1].focus();
-      } else if (e.key === "ArrowLeft" && index > 0) {
-        const prevInput = inputs[index - 1];
-        prevInput.focus();
-        setTimeout(() => {
-          prevInput.setSelectionRange(
-            prevInput.value.length,
-            prevInput.value.length
-          );
-        }, 0); // Posiziona il cursore alla fine
       }
     });
+  };
+
+  // Applica la gestione degli eventi agli input
+  inputs.forEach((input, index) => {
+    handleInput(input, index);
   });
 
+  // Gestione del pulsante "Continua"
   continueButton.addEventListener("click", () => {
     const allFilled = inputs.every((input) => input.value !== "");
     allFilled ? login() : errorModal.show();
