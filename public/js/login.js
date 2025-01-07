@@ -56,16 +56,17 @@ window.addEventListener("load", function () {
 
   // Funzione per gestire gli eventi di input
   const handleInput = (input, curIndex) => {
-    input.addEventListener("input", () => {
-      input.value = input.value.replace(/\D/g, "").slice(-1);
-
-      if (curIndex < inputs.length - 1 && input.value) {
-        inputs[curIndex + 1].focus();
-      }
-    });
-
     input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
+      if (e.key >= "0" && e.key <= "9") {
+        // Se viene digitato un numero, sovrascrivi il valore corrente
+        e.preventDefault(); // Impedisce il comportamento predefinito
+        input.value = e.key; // Sovrascrive il valore corrente
+
+        // Sposta il focus alla prossima cella se esiste
+        if (curIndex < inputs.length - 1) {
+          inputs[curIndex + 1].focus();
+        }
+      } else if (e.key === "Enter") {
         const allFilled = inputs.every((input) => input.value !== "");
         if (allFilled) {
           login();
@@ -73,9 +74,23 @@ window.addEventListener("load", function () {
           resetInputs();
           errorModal.show();
         }
-      } else if (e.key === "Backspace" && !input.value && curIndex > 0) {
-        const prevInput = inputs[curIndex - 1];
-        prevInput.focus();
+      } else if (e.key === "Backspace") {
+        // Cancella il valore e passa alla cella precedente
+        e.preventDefault();
+        input.value = "";
+        if (curIndex > 0) {
+          inputs[curIndex - 1].focus();
+        }
+      } else if (e.key === "ArrowLeft" && curIndex > 0) {
+        // Sposta il focus alla cella precedente
+        inputs[curIndex - 1].focus();
+      } else if (e.key === "ArrowRight" && curIndex < inputs.length - 1) {
+        // Sposta il focus alla cella successiva
+        inputs[curIndex + 1].focus();
+      } else if (e.key === "Delete") {
+        input.value = "";
+      } else {
+        e.preventDefault(); // Impedisce l'input di altri caratteri
       }
     });
   };
