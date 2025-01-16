@@ -15,6 +15,10 @@
       type="image/png"
       sizes="100x100"
       href="https://img.icons8.com/office/100/money-bag-euro.png" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+
     <style>
       .alert {
         animation: fade-out 3s forwards;
@@ -39,6 +43,28 @@
 
       #user-name {
         color: #555; /* Colore per una visibilità chiara */
+      }
+
+      .edit {
+        display: none;
+      }
+
+      .view {
+        display: table-cell; /* Le celle in modalità view sono visibili di default */
+      }
+
+      .input-group-sm .input-group-prepend,
+      .input-group-sm .input-group-text {
+        border-radius: 0;
+        border-top-left-radius: 0.25rem; /* Arrotonda l'angolo in alto a sinistra */
+        border-bottom-left-radius: 0.25rem; /* Arrotonda l'angolo in basso a sinistra */
+      }
+
+      .form-control-sm,
+      .input-group-sm .form-control-sm,
+      .input-group-sm .input-group-text {
+        height: 31px; /* Uniforma l'altezza */
+        line-height: normal; /* Assicura che il testo sia centrato verticalmente */
       }
     </style>
   </head>
@@ -102,8 +128,9 @@
 
         <div class="col-md-1"></div>
 
+        <!-- Radio Button-->
         <div class="col-md-2">
-          <label class="form-label">Tipo</label>
+          <label class="form-label">Tipo Incasso</label>
           <div class="form-check">
             <input
               class="form-check-input"
@@ -111,7 +138,7 @@
               name="tipo-incasso"
               id="radio-entrate"
               value="entrate"
-              checked />
+              required />
             <label class="form-check-label" for="radio-entrate">Entrate</label>
           </div>
           <div class="form-check">
@@ -120,8 +147,10 @@
               type="radio"
               name="tipo-incasso"
               id="radio-uscite"
-              value="uscite" />
+              value="uscite"
+              required />
             <label class="form-check-label" for="radio-uscite">Uscite</label>
+            <div class="invalid-feedback">Seleziona un tipo di incasso.</div>
           </div>
         </div>
 
@@ -134,7 +163,7 @@
               name="tipo-pagamento"
               id="radio-contanti"
               value="contanti"
-              checked />
+              required />
             <label class="form-check-label" for="radio-contanti"
               >Contanti</label
             >
@@ -145,8 +174,12 @@
               type="radio"
               name="tipo-pagamento"
               id="radio-pos"
-              value="pos" />
+              value="pos"
+              required />
             <label class="form-check-label" for="radio-pos">POS</label>
+          </div>
+          <div id="tipo-pagamento-error" class="invalid-feedback">
+            Seleziona un tipo di pagamento.
           </div>
         </div>
 
@@ -159,7 +192,7 @@
               name="tipo-documento"
               id="radio-fattura"
               value="fattura"
-              checked />
+              required />
             <label class="form-check-label" for="radio-fattura">Fattura</label>
           </div>
           <div class="form-check">
@@ -168,26 +201,16 @@
               type="radio"
               name="tipo-documento"
               id="radio-scontrino"
-              value="scontrino" />
+              value="scontrino"
+              required />
             <label class="form-check-label" for="radio-scontrino"
               >Scontrino</label
             >
           </div>
-        </div>
-
-        <!-- <div class="col-md-6">
-          <label for="tipo-pagamento" class="form-label"
-            >Tipo di Pagamento</label
-          >
-          <select class="form-select" id="tipo-pagamento" required>
-            <option value="" selected hidden>Seleziona...</option>
-            <option value="Contanti">Contanti</option>
-            <option value="POS">POS</option>
-          </select>
-          <div id="tipo-pagamento-error" class="invalid-feedback">
-            Seleziona un tipo di pagamento.
+          <div id="tipo-documento-error" class="invalid-feedback">
+            Seleziona un tipo di documento.
           </div>
-        </div> -->
+        </div>
 
         <div class="col-md-12">
           <label for="descrizione" class="form-label">Descrizione</label>
@@ -197,31 +220,7 @@
             id="descrizione"
             placeholder="Inserire numero pratica" />
         </div>
-
-        <!-- <div class="col-md-12">
-          <label for="annotazioni" class="form-label">Annotazioni</label>
-          <textarea
-            class="form-control"
-            id="annotazioni"
-            placeholder="Es. Bollo"></textarea>
-        </div> -->
-
-        <div class="col-md-12">
-          <label for="operatore" class="form-label">Operatore</label>
-          <select class="form-select" id="operatore" required>
-            <option value="" selected hidden>Seleziona...</option>
-            <option value="Alessandra">Alessandra</option>
-            <option value="Federica">Federica</option>
-            <option value="Francesco">Francesco</option>
-            <option value="Graziella">Graziella</option>
-            <option value="Ilaria">Ilaria</option>
-            <option value="Nicolò">Nicolò</option>
-            <option value="Tommaso">Tommaso</option>
-          </select>
-          <div id="operatore-error" class="invalid-feedback">
-            Seleziona un operatore.
-          </div>
-        </div>
+        <input type="hidden" id="operatore" name="operatore" />
 
         <div class="col-md-12">
           <button class="btn btn-primary" type="submit">Salva</button>
@@ -242,6 +241,7 @@
                 <th>Documento</th>
                 <th>Descrizione</th>
                 <th>Operatore</th>
+                <th>Ora</th>
               </tr>
             </thead>
             <tbody id="incassi-list"></tbody>
@@ -278,7 +278,38 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/it.js"></script>
     <script>
-      // Validazione con Bootstrap
+      // Funzione per validare i radio button obbligatori
+      function validateRadioButtons() {
+        let hasError = false;
+
+        // Validazione Tipo Incasso
+        const tipoIncasso = document.querySelector(
+          'input[name="tipo-incasso"]:checked'
+        );
+        if (!tipoIncasso) {
+          hasError = true;
+        }
+
+        // Validazione Tipo Pagamento
+        const tipoPagamento = document.querySelector(
+          'input[name="tipo-pagamento"]:checked'
+        );
+        if (!tipoPagamento) {
+          hasError = true;
+        }
+
+        // Validazione Tipo Documento
+        const tipoDocumento = document.querySelector(
+          'input[name="tipo-documento"]:checked'
+        );
+        if (!tipoDocumento) {
+          hasError = true;
+        }
+
+        return hasError;
+      }
+
+      // Funzione che viene chiamata nel submit
       (() => {
         "use strict";
 
@@ -290,12 +321,13 @@
           form.addEventListener(
             "submit",
             (event) => {
-              if (!form.checkValidity()) {
+              if (form.checkValidity() && !validateRadioButtons()) {
                 event.preventDefault();
                 event.stopPropagation();
+                salvaIncasso();
               } else {
                 event.preventDefault(); // Evita la ricarica della pagina
-                salvaIncasso(); // Salva i dati
+                event.stopPropagation();
               }
 
               form.classList.add("was-validated");
@@ -309,18 +341,17 @@
       function getFormData() {
         return {
           importo: parseFloat(document.getElementById("importo").value) || 0,
-          tipo: document.querySelector('input[name="tipo-incasso"]:checked')
-            .value,
+          tipoIncasso: document.querySelector(
+            'input[name="tipo-incasso"]:checked'
+          )?.value, // Prendi il valore selezionato
           tipoPagamento: document.querySelector(
             'input[name="tipo-pagamento"]:checked'
-          ).value,
+          )?.value, // Prendi il valore selezionato
           tipoDocumento: document.querySelector(
             'input[name="tipo-documento"]:checked'
-          ).value,
+          )?.value, // Prendi il valore selezionato
           descrizione:
-            document.getElementById("descrizione").value || "Non specificato",
-          operatore:
-            document.getElementById("operatore").value || "Non specificato",
+            document.getElementById("descrizione")?.value || "Non specificato",
         };
       }
 
@@ -406,46 +437,44 @@
 
       // Funzione per salvare l'incasso
       function salvaIncasso() {
-        const { importo, tipoPagamento, cliente, annotazioni, operatore } =
-          getFormData();
+        const formData = getFormData(); // Ottieni i dati dal form
+
+        const currentTime = new Date().toLocaleTimeString("it-IT");
+        const currentDate = new Date().toLocaleDateString("it-IT", {
+          weekday: "long",
+          day: "2-digit",
+          month: "long",
+          year: "numeric",
+        });
+        const currentDateISO = new Date().toISOString().split("T")[0]; // Ottieni la data in formato YYYY-MM-DD
+        const currentTimeISO = new Date()
+          .toISOString()
+          .split("T")[1]
+          .split(".")[0]; // Ottieni l'ora in formato HH:MM:SS
+
+        formData.operatoreId = userId;
+        formData.operatoreNome = userName;
+
+        const dataToSend = {
+          ...formData,
+          data: currentDateISO,
+          ora: currentTimeISO,
+        };
 
         let hasError = false;
 
         // Validazione Importo
-        const importoNumerico = parseFloat(importo);
+        const importoNumerico = formData.importo;
         if (isNaN(importoNumerico) || importoNumerico <= 0) {
-          showFieldError(
-            "importo",
-            "importo-error",
-            "Inserisci un importo valido e positivo."
-          );
           hasError = true;
-        } else {
-          clearFieldError("importo", "importo-error");
-        }
-
-        // Validazione Tipo Pagamento
-        if (!tipoPagamento) {
-          showFieldError(
-            "tipo-pagamento",
-            "tipo-pagamento-error",
-            "Seleziona un tipo di pagamento."
-          );
-          hasError = true;
-        } else {
-          clearFieldError("tipo-pagamento", "tipo-pagamento-error");
+          console.error("Importo non valido.");
+          console.log("Importo:", importoNumerico);
         }
 
         // Validazione Operatore
-        if (!operatore) {
-          showFieldError(
-            "operatore",
-            "operatore-error",
-            "Seleziona un operatore."
-          );
+        if (!formData.operatoreId) {
           hasError = true;
-        } else {
-          clearFieldError("operatore", "operatore-error");
+          console.error("Operatore non valido.");
         }
 
         // Interrompi se ci sono errori
@@ -453,136 +482,358 @@
           return;
         }
 
-        // Prosegui con il salvataggio
-        const currentDate = new Date().toLocaleDateString("it-IT", {
-          weekday: "long",
-          day: "2-digit",
-          month: "long",
-          year: "numeric",
-        });
+        const tipoIncassoFormatted =
+          tipoIncassoMap[formData.tipoIncasso] || formData.tipoIncasso;
+        const tipoPagamentoFormatted =
+          tipoPagamentoMap[formData.tipoPagamento] || formData.tipoPagamento;
+        const tipoDocumentoFormatted =
+          tipoDocumentoMap[formData.tipoDocumento] || formData.tipoDocumento;
 
         const datiConferma = `
-            <ul>
-              <li><strong>Data:</strong> ${currentDate}</li>
-              <li><strong>Importo:</strong> € ${importoNumerico.toFixed(2)}</li>
-              <li><strong>Tipo Pagamento:</strong> ${tipoPagamento}</li>
-              <li><strong>Cliente:</strong> ${cliente || "Non specificato"}</li>
-              <li><strong>Annotazioni:</strong> ${
-                annotazioni || "Non specificato"
-              }</li>
-              <li><strong>Operatore:</strong> ${operatore}</li>
-            </ul>`;
+                  <ul>
+                    <li><strong>Importo:</strong> € ${importoNumerico.toFixed(
+                      2
+                    )}</li>
+                    <li><strong>Tipo Incasso:</strong> ${tipoIncassoFormatted}</li>
+                    <li><strong>Tipo Pagamento:</strong> ${tipoPagamentoFormatted}</li>
+                    <li><strong>Tipo Documento:</strong> ${tipoDocumentoFormatted}</li>
+                    <li><strong>Descrizione:</strong> ${
+                      formData.descrizione
+                    }</li>
+                  </ul>`;
 
         showConfirmModal(datiConferma, () => {
-          salvataggioSuStorage({
-            importo: importoNumerico,
-            tipoPagamento,
-            cliente,
-            annotazioni,
-            operatore,
-          });
+          console.log(dataToSend);
+          fetch("/api/incassi", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(dataToSend),
+          })
+            .then((response) => response.json())
+            .then((result) => {
+              if (result.success) {
+                showSuccessMessage("Incasso salvato con successo!");
+                caricaIncassi(currentDate); // Ricarica la tabella
+                document.getElementById("incasso-form").reset();
+              } else {
+                console.error("Errore durante il salvataggio:", result.message);
+              }
+            })
+            .catch((error) => {
+              console.error("Errore durante la chiamata al server:", error);
+            });
         });
       }
-      // Funzione per aggiornare il totale degli incassi
-      function aggiornaTotali(incassi) {
-        let totaleCassa = 0,
-          totaleContanti = 0,
-          totalePOS = 0;
 
-        incassi.forEach((incasso) => {
-          const importo = parseFloat(incasso.importo);
-          if (incasso.tipo === "uscite") totaleCassa -= importo;
-          else totaleCassa += importo;
+      const tipoIncassoMap = {
+        entrate: "Entrate",
+        uscite: "Uscite",
+      };
 
-          if (incasso.tipoPagamento === "Contanti") {
-            totaleContanti += incasso.tipo === "uscite" ? -importo : importo;
-          } else if (incasso.tipoPagamento === "POS") {
-            totalePOS += incasso.tipo === "uscite" ? -importo : importo;
-          }
-        });
+      const tipoPagamentoMap = {
+        contanti: "Contanti",
+        pos: "POS",
+      };
 
-        document.getElementById("totale-cassa").innerText =
-          totaleCassa.toFixed(2);
-        document.getElementById("totale-contanti").innerText =
-          totaleContanti.toFixed(2);
-        document.getElementById("totale-pos").innerText = totalePOS.toFixed(2);
-      }
-
-      // Funzione per salvare i dati nel localStorage
-      function salvataggioSuStorage(dati) {
-        const currentDateISO = new Date().toISOString().split("T")[0];
-        let data;
-
-        try {
-          data = JSON.parse(localStorage.getItem("incassi")) || {};
-        } catch (error) {
-          console.error("Errore nel parsing del localStorage:", error);
-          data = {};
-        }
-
-        if (!data[currentDateISO]) {
-          data[currentDateISO] = [];
-        }
-
-        data[currentDateISO].push(dati);
-
-        localStorage.setItem("incassi", JSON.stringify(data));
-        showSuccessMessage("Salvato con successo!");
-        caricaIncassi(currentDateISO);
-
-        // Reset campi del form
-        document.getElementById("incasso-form").reset();
-        // Rimuove la classe 'was-validated' dal form
-        const form = document.getElementById("incasso-form");
-        form.classList.remove("was-validated");
-      }
+      const tipoDocumentoMap = {
+        fattura: "Fattura",
+        scontrino: "Scontrino",
+      };
 
       // Funzione per caricare gli incassi
       function caricaIncassi(date) {
-        const data = JSON.parse(localStorage.getItem("incassi")) || {};
-        const incassi = data[date] || [];
+        fetch(`/api/incassi/${date}`)
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              const incassi = data.incassi;
+              let totaleCassa = 0;
+              let totaleContanti = 0;
+              let totalePOS = 0;
 
-        let totaleCassa = 0;
-        let totaleContanti = 0;
-        let totalePOS = 0;
+              const list = document.getElementById("incassi-list");
+              list.innerHTML = "";
 
-        const list = document.getElementById("incassi-list");
-        list.innerHTML = "";
+              incassi.forEach((incasso, index) => {
+                const importo = parseFloat(incasso.importo);
+                if (incasso.tipoIncasso === "uscite") {
+                  if (incasso.tipoPagamento === "contanti") {
+                    totaleCassa -= importo;
+                    totaleContanti -= importo;
+                  } else if (incasso.tipoPagamento === "pos")
+                    totalePOS -= importo;
+                } else {
+                  if (incasso.tipoPagamento === "contanti") {
+                    totaleCassa += importo;
+                    totaleContanti += importo;
+                  } else if (incasso.tipoPagamento === "pos")
+                    totalePOS += importo;
+                }
 
-        incassi.forEach((incasso) => {
-          const importo = parseFloat(incasso.importo);
-          console.log(incasso.tipo);
-          if (incasso.tipo === "uscite") {
-            totaleCassa -= importo;
-            if (incasso.tipoPagamento === "contanti") totaleContanti -= importo;
-            else if (incasso.tipoPagamento === "pos") totalePOS -= importo;
-          } else {
-            totaleCassa += importo;
-            if (incasso.tipoPagamento === "contanti") totaleContanti += importo;
-            else if (incasso.tipoPagamento === "pos") totalePOS += importo;
-          }
+                // Usa la mappa per ottenere il valore formattato
+                const tipoIncassoFormatted =
+                  tipoIncassoMap[incasso.tipoIncasso] || incasso.tipoIncasso;
+                const tipoPagamentoFormatted =
+                  tipoPagamentoMap[incasso.tipoPagamento] ||
+                  incasso.tipoPagamento;
+                const tipoDocumentoFormatted =
+                  tipoDocumentoMap[incasso.tipoDocumento] ||
+                  incasso.tipoDocumento;
 
-          const row = document.createElement("tr");
-          row.innerHTML = `
-          <td>€ ${importo.toFixed(2)}</td>
-          <td>${incasso.tipo}</td>
-          <td>${incasso.tipoPagamento}</td>
-          <td>${incasso.tipoDocumento}</td>
-          <td>${incasso.descrizione}</td>
-          <td>${incasso.operatore}</td>
-        `;
-          list.appendChild(row);
-        });
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                <!-- Colonne in modalità view -->
+                <td class="view">€ ${importo.toFixed(2)}</td>
+                <td class="view">${tipoIncassoFormatted}</td>
+                <td class="view">${tipoPagamentoFormatted}</td>
+                <td class="view">${tipoDocumentoFormatted}</td>
+                <td class="view">${incasso.descrizione}</td>
 
-        document.getElementById("totale-cassa").innerText =
-          totaleCassa.toFixed(2);
-        document.getElementById("totale-contanti").innerText =
-          totaleContanti.toFixed(2);
-        document.getElementById("totale-pos").innerText = totalePOS.toFixed(2);
+                <!-- Colonne in modalità edit -->
+                <td class="edit">
+                  <div class="input-group input-group-sm">
+                    <div class="input-group-prepend">
+                      <span class="input-group-text text-sm" id="basic-addon1" style="font-size: 0.8rem;">&euro;</span>
+                    </div>
+                    <input type="text" class="form-control form-control-sm" id="importo"
+                  placeholder="Inserisci importo"
+                  required
+                  oninput="validateImporto(this)" value="${importo.toFixed(
+                    2
+                  )}" />
+                  </div>
+                </td>
+                <!-- Tipo Incasso - Menu a tendina invece dei radio button -->
+                <td class="edit">
+                  <select class="form-control form-control-sm">
+                    <option ${
+                      tipoIncassoFormatted === "Entrate" ? "selected" : ""
+                    }>Entrate</option>
+                    <option ${
+                      tipoIncassoFormatted === "Uscite" ? "selected" : ""
+                    }>Uscite</option>
+                  </select>
+                </td>
+
+                <!-- Tipo Pagamento - Menu a tendina (puoi usare un input se preferisci) -->
+                <td class="edit">
+                  <select class="form-control form-control-sm">
+                    <option ${
+                      tipoPagamentoFormatted === "Contanti" ? "selected" : ""
+                    }>Contanti</option>
+                    <option ${
+                      tipoPagamentoFormatted === "POS" ? "selected" : ""
+                    }>POS</option>
+                  </select>
+                </td>
+
+                <!-- Tipo Documento - Menu a tendina -->
+                <td class="edit">
+                  <select class="form-control form-control-sm">
+                    <option ${
+                      tipoDocumentoFormatted === "Fattura" ? "selected" : ""
+                    }>Fattura</option>
+                    <option ${
+                      tipoDocumentoFormatted === "Scontrino" ? "selected" : ""
+                    }>Scontrino</option>
+                  </select>
+                </td>
+                <td class="edit">
+                  <input type="text" class="form-control form-control-sm" id="descrizione"
+                  placeholder="Inserire numero pratica" value="${
+                    incasso.descrizione
+                  }" />
+                </td>
+
+                <td>${incasso.operatoreNome || "Non specificato"}</td>
+                <td>${incasso.ora}</td>
+
+                <!-- Icone per Modifica e Elimina in modalità view -->
+                <td class="text-end view">
+                  <div style="white-space: nowrap">
+                  <i class="fas fa-edit text-warning me-2" onclick="modificaIncasso(${
+                    index + 1
+                  })" style="cursor: pointer;"></i>
+                    <i class="fas fa-trash-alt text-danger" onclick="eliminaIncasso(${
+                      index + 1
+                    })" style="cursor: pointer;"></i>
+                    </div>
+                    </td>
+
+                      <!-- Icone per Salvataggio e Annullamento in modalità edit -->
+                      <td class="text-end edit" style="display:none;">
+                  <i class="fas fa-save text-success me-2" onclick="salvaModifiche(${
+                    index + 1
+                  })" style="cursor: pointer;"></i>
+                  <i class="fas fa-times text-danger" onclick="annullaModifiche(${
+                    index + 1
+                  })" style="cursor: pointer;"></i>
+                </td>
+              `;
+
+                list.appendChild(row);
+              });
+
+              document.getElementById("totale-cassa").innerText =
+                totaleCassa.toFixed(2);
+              document.getElementById("totale-contanti").innerText =
+                totaleContanti.toFixed(2);
+              document.getElementById("totale-pos").innerText =
+                totalePOS.toFixed(2);
+            }
+          })
+          .catch((error) => {
+            console.error(
+              "Errore durante il caricamento degli incassi:",
+              error
+            );
+          });
       }
+
+      function modificaIncasso(index) {
+        const row = document.querySelectorAll("tr")[index];
+        const viewCells = row.querySelectorAll(".view");
+        const editCells = row.querySelectorAll(".edit");
+
+        // Nascondi le celle di visualizzazione e mostra quelle di modifica
+        viewCells.forEach((cell) => (cell.style.display = "none"));
+        editCells.forEach((cell) => (cell.style.display = "table-cell"));
+
+        // Nascondi le icone di modifica/eliminazione e mostra quelle di salvataggio/annullamento
+        const editIcons = row.querySelectorAll(".view i");
+        const saveCancelIcons = row.querySelectorAll(".edit i");
+
+        // Verifica se le icone sono effettivamente trovate prima di modificare il display
+        if (editIcons.length > 0) {
+          editIcons.forEach((icon) => (icon.style.display = "none"));
+        }
+
+        if (saveCancelIcons.length > 0) {
+          saveCancelIcons.forEach(
+            (icon) => (icon.style.display = "inline-block")
+          );
+        }
+      }
+
+      function salvaModifiche(index) {
+        const row = document.querySelectorAll("tr")[index];
+        const editCells = row.querySelectorAll(".edit");
+        const viewCells = row.querySelectorAll(".view");
+
+        // Prendi i nuovi valori dai campi di input
+        const importo = editCells[0].querySelector("input").value;
+        const tipoIncasso = editCells[1].querySelector("input").value;
+        const tipoPagamento = editCells[2].querySelector("input").value;
+        const tipoDocumento = editCells[3].querySelector("input").value;
+        const descrizione = editCells[4].querySelector("input").value;
+
+        // Salva i nuovi dati nel localStorage
+        const currentTime = new Date().toLocaleTimeString("it-IT");
+
+        // Aggiorna il row con i nuovi valori
+        row.querySelector(".view:nth-child(1)").innerHTML = `€ ${parseFloat(
+          importo
+        ).toFixed(2)}`;
+        row.querySelector(".view:nth-child(2)").innerHTML = tipoIncasso;
+        row.querySelector(".view:nth-child(3)").innerHTML = tipoPagamento;
+        row.querySelector(".view:nth-child(4)").innerHTML = tipoDocumento;
+        row.querySelector(".view:nth-child(5)").innerHTML = descrizione;
+        row.querySelector(".view:nth-child(6)").innerHTML = currentTime;
+
+        // Riporta la tabella alla modalità di visualizzazione
+        viewCells.forEach((cell) => (cell.style.display = "table-cell"));
+        editCells.forEach((cell) => (cell.style.display = "none"));
+
+        // Nascondi le icone di salvataggio/annullamento e mostra quelle di modifica/eliminazione
+        row.querySelector(".view i").style.display = "inline-block";
+        row.querySelector(".edit i").style.display = "none";
+
+        // Aggiorna i dati nel localStorage
+        aggiornaStorage(
+          index,
+          importo,
+          tipoIncasso,
+          tipoPagamento,
+          tipoDocumento,
+          descrizione,
+          currentTime
+        );
+      }
+
+      function annullaModifiche(index) {
+        const row = document.querySelectorAll("tr")[index];
+        const editCells = row.querySelectorAll(".edit");
+        const viewCells = row.querySelectorAll(".view");
+
+        // Riporta la tabella alla modalità di visualizzazione senza salvare le modifiche
+        viewCells.forEach((cell) => (cell.style.display = "table-cell"));
+        editCells.forEach((cell) => (cell.style.display = "none"));
+
+        // Nascondi le icone di salvataggio/annullamento e mostra quelle di modifica/eliminazione
+        row.querySelector(".view i").style.display = "inline-block";
+        row.querySelector(".edit i").style.display = "none";
+      }
+
+      function aggiornaStorage(
+        index,
+        importo,
+        tipoIncasso,
+        tipoPagamento,
+        tipoDocumento,
+        descrizione,
+        ora
+      ) {
+        const currentDateISO = new Date().toISOString().split("T")[0];
+        let data = JSON.parse(localStorage.getItem("incassi")) || {};
+
+        // Aggiungi i nuovi dati nell'array
+        data[currentDateISO][index] = {
+          importo,
+          tipoIncasso,
+          tipoPagamento,
+          tipoDocumento,
+          descrizione,
+          ora,
+        };
+
+        localStorage.setItem("incassi", JSON.stringify(data));
+      }
+
+      let userId = null;
+      let userName = null;
 
       // Gestione iniziale della pagina
       document.addEventListener("DOMContentLoaded", function () {
+        const tipoIncassoRadios = document.getElementsByName("tipo-incasso");
+        const tipoPagamentoRadios =
+          document.getElementsByName("tipo-pagamento");
+
+        tipoIncassoRadios.forEach((radio) => {
+          radio.addEventListener("change", function () {
+            // Se "Uscite" è selezionato e "POS" è selezionato, cambia automaticamente a "Contanti"
+            if (
+              document.getElementById("radio-uscite").checked &&
+              document.getElementById("radio-pos").checked
+            ) {
+              document.getElementById("radio-contanti").checked = true;
+            }
+          });
+        });
+
+        tipoPagamentoRadios.forEach((radio) => {
+          radio.addEventListener("change", function () {
+            // Se "Uscite" è selezionato e "POS" è selezionato, cambia automaticamente a "Entrate"
+            if (
+              document.getElementById("radio-uscite").checked &&
+              document.getElementById("radio-pos").checked
+            ) {
+              document.getElementById("radio-entrate").checked = true;
+            }
+          });
+        });
+
         const today = new Date();
         const formattedToday = today
           .toLocaleDateString("it-IT", {
@@ -639,8 +890,14 @@
           })
           .then((data) => {
             if (data.success) {
-              const userNameElement = document.getElementById("user-name");
-              userNameElement.textContent = `Utente registrato: ${data.userName}`;
+              userId = data.userId; // Salva l'ID utente
+              userName = data.userName; // Salva il nome utente
+              // Aggiorna l'interfaccia utente con il nome
+              document.getElementById(
+                "user-name"
+              ).textContent = `Utente registrato: ${userName}`;
+            } else {
+              redirectToLogin();
             }
           })
           .catch((error) => {
@@ -648,11 +905,16 @@
               "Errore durante il caricamento del nome utente:",
               error
             );
-            const userNameElement = document.getElementById("user-name");
-            userNameElement.textContent = "Utente non configurato";
+            document.getElementById("user-name").textContent =
+              "Utente non configurato";
+            redirectToLogin();
           });
       });
 
+      function redirectToLogin() {
+        // Reindirizza alla pagina di login
+        window.location.href = "/login.html";
+      }
       // Mostra o nasconde il form di inserimento incassi
       function toggleFormVisibility(selectedDate) {
         if (!selectedDate) {

@@ -79,10 +79,71 @@ app.post("/login", async (req, res) => {
     res.json({
       success: true,
       redirect: "/dashboard.html",
+      id: id,
       nomeUtente: nome_utente,
     });
   } catch (error) {
     console.error("Errore durante il login:", error);
+    res.status(500).json({ success: false, message: "Errore del server" });
+  }
+});
+
+// API per salvare un incasso
+app.post("/api/incassi", async (req, res) => {
+  const {
+    importo,
+    tipoIncasso,
+    tipoPagamento,
+    tipoDocumento,
+    descrizione,
+    operatoreId,
+    data,
+    ora,
+  } = req.body;
+  console.log("Salvataggio incasso:", {
+    importo,
+    tipoIncasso,
+    tipoPagamento,
+    tipoDocumento,
+    descrizione,
+    operatoreId,
+    data,
+    ora,
+  });
+  try {
+    const query = `
+      INSERT INTO incassi (
+        importo, tipo_incasso, tipo_pagamento, tipo_documento, descrizione, 
+        id_operatore, data, ora
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id;
+    `;
+    const result = await pool.query(query, [
+      importo,
+      tipoIncasso,
+      tipoPagamento,
+      tipoDocumento,
+      descrizione,
+      operatoreId,
+      data,
+      ora,
+    ]);
+    res.status(201).json({ success: true, id: result.rows[0].id });
+  } catch (error) {
+    console.error("Errore durante il salvataggio dell'incasso:", error);
+    res.status(500).json({ success: false, message: "Errore del server" });
+  }
+});
+
+// API per ottenere gli incassi di una specifica data
+app.get("/api/incassi/:data", async (req, res) => {
+  const { data } = req.params;
+
+  try {
+    const query = "SELECT * FROM incassi WHERE data = $1 ORDER BY ora DESC";
+    const result = await pool.query(query, [data]);
+    res.json({ success: true, incassi: result.rows });
+  } catch (error) {
+    console.error("Errore durante il caricamento degli incassi:", error);
     res.status(500).json({ success: false, message: "Errore del server" });
   }
 });
@@ -109,7 +170,11 @@ app.get("/api/utente", (req, res) => {
   console.log("req.session.userId", req.session.userId);
   console.log("req.session.userName", req.session.userName);
 
-  res.json({ success: true, userName: req.session.userName });
+  res.json({
+    success: true,
+    userId: req.session.userId,
+    userName: req.session.userName,
+  });
 });
 
 // Middleware per gestire gli errori
