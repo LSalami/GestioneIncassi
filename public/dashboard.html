@@ -177,9 +177,7 @@
               value="pos"
               required />
             <label class="form-check-label" for="radio-pos">POS</label>
-          </div>
-          <div id="tipo-pagamento-error" class="invalid-feedback">
-            Seleziona un tipo di pagamento.
+            <div class="invalid-feedback">Seleziona un tipo di pagamento.</div>
           </div>
         </div>
 
@@ -206,9 +204,7 @@
             <label class="form-check-label" for="radio-scontrino"
               >Scontrino</label
             >
-          </div>
-          <div id="tipo-documento-error" class="invalid-feedback">
-            Seleziona un tipo di documento.
+            <div class="invalid-feedback">Seleziona un tipo di documento.</div>
           </div>
         </div>
 
@@ -503,7 +499,6 @@
                   </ul>`;
 
         showConfirmModal(datiConferma, () => {
-          console.log(dataToSend);
           fetch("/api/incassi", {
             method: "POST",
             headers: {
@@ -515,8 +510,8 @@
             .then((result) => {
               if (result.success) {
                 showSuccessMessage("Incasso salvato con successo!");
-                caricaIncassi(currentDate); // Ricarica la tabella
-                document.getElementById("incasso-form").reset();
+                caricaIncassi(currentDateISO); // Ricarica la tabella
+                resetFormState("incasso-form"); // Resetta il form
               } else {
                 console.error("Errore durante il salvataggio:", result.message);
               }
@@ -525,6 +520,36 @@
               console.error("Errore durante la chiamata al server:", error);
             });
         });
+      }
+
+      function resetFormState(formId) {
+        const form = document.getElementById(formId);
+
+        if (!form) {
+          console.error(`Il form con ID '${formId}' non esiste.`);
+          return;
+        }
+
+        // Rimuove tutte le classi di validazione
+        form.classList.remove("was-validated");
+
+        // Ripristina gli stati iniziali di tutti i campi
+        form
+          .querySelectorAll(".form-control, .form-check-input")
+          .forEach((field) => {
+            field.classList.remove("is-valid", "is-invalid");
+          });
+
+        // Nasconde tutti i messaggi di errore
+        form
+          .querySelectorAll(".invalid-feedback, .valid-feedback")
+          .forEach((feedback) => {
+            feedback.classList.add("d-none");
+            feedback.innerText = ""; // Rimuove eventuali messaggi personalizzati
+          });
+
+        // Reset dei valori del modulo
+        form.reset();
       }
 
       const tipoIncassoMap = {
@@ -558,29 +583,37 @@
 
               incassi.forEach((incasso, index) => {
                 const importo = parseFloat(incasso.importo);
-                if (incasso.tipoIncasso === "uscite") {
-                  if (incasso.tipoPagamento === "contanti") {
+                if (incasso.tipo_incasso === "uscite") {
+                  if (incasso.tipo_pagamento === "contanti") {
                     totaleCassa -= importo;
                     totaleContanti -= importo;
-                  } else if (incasso.tipoPagamento === "pos")
+                  } else if (incasso.tipo_pagamento === "pos")
                     totalePOS -= importo;
                 } else {
-                  if (incasso.tipoPagamento === "contanti") {
+                  if (incasso.tipo_pagamento === "contanti") {
                     totaleCassa += importo;
                     totaleContanti += importo;
-                  } else if (incasso.tipoPagamento === "pos")
+                  } else if (incasso.tipo_pagamento === "pos")
                     totalePOS += importo;
                 }
 
                 // Usa la mappa per ottenere il valore formattato
                 const tipoIncassoFormatted =
-                  tipoIncassoMap[incasso.tipoIncasso] || incasso.tipoIncasso;
+                  tipoIncassoMap[incasso.tipo_incasso] || incasso.tipo_incasso;
                 const tipoPagamentoFormatted =
-                  tipoPagamentoMap[incasso.tipoPagamento] ||
-                  incasso.tipoPagamento;
+                  tipoPagamentoMap[incasso.tipo_pagamento] ||
+                  incasso.tipo_pagamento;
                 const tipoDocumentoFormatted =
-                  tipoDocumentoMap[incasso.tipoDocumento] ||
-                  incasso.tipoDocumento;
+                  tipoDocumentoMap[incasso.tipo_documento] ||
+                  incasso.tipo_documento;
+
+                // Formattare l'ora nel fuso orario locale
+                const oraFormatted = new Intl.DateTimeFormat("it-IT", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                  hour12: false,
+                }).format(new Date(`${date}T${incasso.ora}Z`));
 
                 const row = document.createElement("tr");
                 row.innerHTML = `
@@ -647,8 +680,8 @@
                   }" />
                 </td>
 
-                <td>${incasso.operatoreNome || "Non specificato"}</td>
-                <td>${incasso.ora}</td>
+                <td>${incasso.nome_utente || "Non specificato"}</td>
+                <td>${oraFormatted}</td>
 
                 <!-- Icone per Modifica e Elimina in modalità view -->
                 <td class="text-end view">

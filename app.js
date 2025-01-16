@@ -100,16 +100,6 @@ app.post("/api/incassi", async (req, res) => {
     data,
     ora,
   } = req.body;
-  console.log("Salvataggio incasso:", {
-    importo,
-    tipoIncasso,
-    tipoPagamento,
-    tipoDocumento,
-    descrizione,
-    operatoreId,
-    data,
-    ora,
-  });
   try {
     const query = `
       INSERT INTO incassi (
@@ -139,7 +129,21 @@ app.get("/api/incassi/:data", async (req, res) => {
   const { data } = req.params;
 
   try {
-    const query = "SELECT * FROM incassi WHERE data = $1 ORDER BY ora DESC";
+    const query = `
+      SELECT 
+        incassi.*, 
+        utenti.nome_utente AS nome_utente
+      FROM 
+        incassi
+      JOIN 
+        utenti
+      ON 
+        incassi.id_operatore = utenti.id
+      WHERE 
+        incassi.data = $1
+      ORDER BY 
+        incassi.ora DESC;
+    `;
     const result = await pool.query(query, [data]);
     res.json({ success: true, incassi: result.rows });
   } catch (error) {
