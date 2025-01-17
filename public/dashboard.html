@@ -278,6 +278,12 @@
       const tipoIncassoMap = { entrate: "Entrate", uscite: "Uscite" };
       const tipoPagamentoMap = { contanti: "Contanti", pos: "POS" };
       const tipoDocumentoMap = { fattura: "Fattura", scontrino: "Scontrino" };
+      const tipoIncassoMapInverse = { Entrate: "entrate", Uscite: "uscite" };
+      const tipoPagamentoMapInverse = { Contanti: "contanti", POS: "pos" };
+      const tipoDocumentoMapInverse = {
+        Fattura: "fattura",
+        Scontrino: "scontrino",
+      };
 
       let userId = null;
       let userName = null;
@@ -601,19 +607,19 @@
       // Genera HTML per il modal di conferma
       function generateConfirmHTML(data) {
         return `
-              <ul>
-                <li><strong>Importo:</strong> € ${data.importo.toFixed(2)}</li>
-                <li><strong>Tipo Incasso:</strong> ${
-                  tipoIncassoMap[data.tipoIncasso]
-                }</li>
-                <li><strong>Tipo Pagamento:</strong> ${
-                  tipoPagamentoMap[data.tipoPagamento]
-                }</li>
-                <li><strong>Tipo Documento:</strong> ${
-                  tipoDocumentoMap[data.tipoDocumento]
-                }</li>
-                <li><strong>Descrizione:</strong> ${data.descrizione}</li>
-              </ul>`;
+          <ul>
+            <li><strong>Importo:</strong> € ${data.importo.toFixed(2)}</li>
+            <li><strong>Tipo Incasso:</strong> ${
+              tipoIncassoMap[data.tipoIncasso]
+            }</li>
+            <li><strong>Tipo Pagamento:</strong> ${
+              tipoPagamentoMap[data.tipoPagamento]
+            }</li>
+            <li><strong>Tipo Documento:</strong> ${
+              tipoDocumentoMap[data.tipoDocumento]
+            }</li>
+            <li><strong>Descrizione:</strong> ${data.descrizione}</li>
+          </ul>`;
       }
 
       // Funzione per caricare gli incassi
@@ -664,93 +670,107 @@
             tipoDocumentoMap[incasso.tipo_documento] || incasso.tipo_documento;
 
           const row = document.createElement("tr");
+          row.setAttribute("data-id", incasso.id);
           row.innerHTML = `
-          <!-- Colonne in modalità view -->
-          <td class="view">€ ${importo.toFixed(2)}</td>
-          <td class="view">${tipoIncassoFormatted}</td>
-          <td class="view">${tipoPagamentoFormatted}</td>
-          <td class="view">${tipoDocumentoFormatted}</td>
-          <td class="view">${incasso.descrizione}</td>
+            <tr data-id="${incasso.id}">
 
-          <!-- Colonne in modalità edit -->
-          <td class="edit">
-            <div class="input-group input-group-sm">
-              <div class="input-group-prepend">
-                <span class="input-group-text text-sm" id="basic-addon1" style="font-size: 0.8rem;">&euro;</span>
-              </div>
-              <input type="text" class="form-control form-control-sm" id="importo"
-            placeholder="Inserisci importo"
-            required
-            oninput="validateImporto(this)" value="${importo.toFixed(2)}" />
-            </div>
-          </td>
-          <!-- Tipo Incasso - Menu a tendina invece dei radio button -->
-          <td class="edit">
-            <select class="form-control form-control-sm">
-              <option ${
-                tipoIncassoFormatted === "Entrate" ? "selected" : ""
-              }>Entrate</option>
-              <option ${
-                tipoIncassoFormatted === "Uscite" ? "selected" : ""
-              }>Uscite</option>
-            </select>
-          </td>
+              <!-- Colonne in modalità view -->
+              <td class="view">€ ${importo.toFixed(2)}</td>
+              <td class="view">${tipoIncassoFormatted}</td>
+              <td class="view">${tipoPagamentoFormatted}</td>
+              <td class="view">${tipoDocumentoFormatted}</td>
+              <td class="view">${incasso.descrizione}</td>
 
-          <!-- Tipo Pagamento - Menu a tendina (puoi usare un input se preferisci) -->
-          <td class="edit">
-            <select class="form-control form-control-sm">
-              <option ${
-                tipoPagamentoFormatted === "Contanti" ? "selected" : ""
-              }>Contanti</option>
-              <option ${
-                tipoPagamentoFormatted === "POS" ? "selected" : ""
-              }>POS</option>
-            </select>
-          </td>
-
-          <!-- Tipo Documento - Menu a tendina -->
-          <td class="edit">
-            <select class="form-control form-control-sm">
-              <option ${
-                tipoDocumentoFormatted === "Fattura" ? "selected" : ""
-              }>Fattura</option>
-              <option ${
-                tipoDocumentoFormatted === "Scontrino" ? "selected" : ""
-              }>Scontrino</option>
-            </select>
-          </td>
-          <td class="edit">
-            <input type="text" class="form-control form-control-sm" id="descrizione"
-            placeholder="Inserire numero pratica" value="${
-              incasso.descrizione
-            }" />
-          </td>
-
-          <td>${incasso.nome_utente || "Non specificato"}</td>
-          <td>${incasso.ora}</td>
-
-          <!-- Icone per Modifica e Elimina in modalità view -->
-          <td class="text-end view">
-            <div style="white-space: nowrap">
-            <i class="fas fa-edit text-warning me-2" onclick="modificaIncasso(${
-              index + 1
-            })" style="cursor: pointer;"></i>
-              <i class="fas fa-trash-alt text-danger" onclick="eliminaIncasso(${
-                index + 1
-              })" style="cursor: pointer;"></i>
-              </div>
+              <!-- Colonne in modalità edit -->
+              <td class="edit">
+                <div class="input-group input-group-sm">
+                  <div class="input-group-prepend">
+                    <span class="input-group-text text-sm" id="basic-addon1" style="font-size: 0.8rem;">&euro;</span>
+                  </div>
+                  <input type="text" class="form-control form-control-sm" 
+                    id="importo${incasso.id}"
+                    placeholder="Inserisci importo" required
+                    oninput="validateImporto(this)"
+                    value="${importo.toFixed(2)}" />
+                </div>
               </td>
 
-                <!-- Icone per Salvataggio e Annullamento in modalità edit -->
-                <td class="text-end edit" style="display:none;">
-            <i class="fas fa-save text-success me-2" onclick="salvaModifiche(${
-              index + 1
-            })" style="cursor: pointer;"></i>
-            <i class="fas fa-times text-danger" onclick="annullaModifiche(${
-              index + 1
-            })" style="cursor: pointer;"></i>
-          </td>
-        `;
+              <!-- Tipo Incasso - Menu a tendina  -->
+              <td class="edit">
+                <select
+                  id="tipoIncasso${incasso.id}"
+                  class="form-control form-control-sm">
+                  <option ${
+                    tipoIncassoFormatted === "Entrate" ? "selected" : ""
+                  }>Entrate</option>
+                  <option ${
+                    tipoIncassoFormatted === "Uscite" ? "selected" : ""
+                  }>Uscite</option>
+                </select>
+              </td>
+
+              <!-- Tipo Pagamento - Menu a tendina  -->
+              <td class="edit">
+                <select
+                  id="tipoPagamento${incasso.id}" 
+                  class="form-control form-control-sm">
+                  <option ${
+                    tipoPagamentoFormatted === "Contanti" ? "selected" : ""
+                  }>Contanti</option>
+                  <option ${
+                    tipoPagamentoFormatted === "POS" ? "selected" : ""
+                  }>POS</option>
+                </select>
+              </td>
+
+              <!-- Tipo Documento - Menu a tendina -->
+              <td class="edit">
+                <select
+                  id="tipoDocumento${incasso.id}"
+                  class="form-control form-control-sm">
+                  <option ${
+                    tipoDocumentoFormatted === "Fattura" ? "selected" : ""
+                  }>Fattura</option>
+                  <option ${
+                    tipoDocumentoFormatted === "Scontrino" ? "selected" : ""
+                  }>Scontrino</option>
+                </select>
+              </td>
+              <td class="edit">
+                <input type="text" class="form-control form-control-sm"
+                  id="descrizione${incasso.id}"
+                  placeholder="Inserire numero pratica" 
+                  value="${incasso.descrizione}" />
+              </td>
+
+              <!-- Fissi non modificabili -->
+              <td>${incasso.nome_utente || "Non specificato"}</td>
+              <td>${incasso.ora}</td>
+
+              <!-- Icone per Modifica e Elimina in modalità view -->
+              <td class="text-end view">
+                <div style="white-space: nowrap">
+                  <i class="fas fa-edit text-warning me-2"
+                    onclick="modificaIncasso(${incasso.id})"
+                    style="cursor: pointer;"></i>
+                  <i class="fas fa-trash-alt text-danger"
+                    onclick="rimuoviIncasso(${incasso.id})"
+                    style="cursor: pointer;"></i>
+                </div>
+              </td>
+
+              <!-- Icone per Salvataggio e Annullamento in modalità edit -->
+              <td class="text-end edit" style="display:none;">
+                <i class="fas fa-save text-success me-2"
+                  onclick="salvaModifiche(${incasso.id})"
+                  style="cursor: pointer;"></i>
+                <i class="fas fa-times text-danger"
+                  onclick="annullaModifiche(${incasso.id})"
+                  style="cursor: pointer;"></i>
+              </td>
+
+            </tr>
+          `;
 
           list.appendChild(row);
         });
@@ -763,79 +783,193 @@
       }
 
       // Funzione per modificare gli incassi
-      function modificaIncasso(index) {
-        const row = document.querySelectorAll("tr")[index];
-        const viewCells = row.querySelectorAll(".view");
-        const editCells = row.querySelectorAll(".edit");
-
-        // Nascondi le celle di visualizzazione e mostra quelle di modifica
-        viewCells.forEach((cell) => (cell.style.display = "none"));
-        editCells.forEach((cell) => (cell.style.display = "table-cell"));
-
-        // Nascondi le icone di modifica/eliminazione e mostra quelle di salvataggio/annullamento
-        const editIcons = row.querySelectorAll(".view i");
-        const saveCancelIcons = row.querySelectorAll(".edit i");
-
-        // Verifica se le icone sono effettivamente trovate prima di modificare il display
-        if (editIcons.length > 0) {
-          editIcons.forEach((icon) => (icon.style.display = "none"));
+      function modificaIncasso(id) {
+        // Trova la riga con l'attributo `data-id`
+        const row = document.querySelector(`tr[data-id="${id}"]`);
+        if (!row) {
+          console.error(`Riga con ID ${id} non trovata.`);
+          return;
         }
 
-        if (saveCancelIcons.length > 0) {
-          saveCancelIcons.forEach(
-            (icon) => (icon.style.display = "inline-block")
-          );
-        }
+        // Salva i valori originali
+        row.dataset.originalImporto = document.getElementById(
+          `importo${id}`
+        ).value;
+        row.dataset.originalDescrizione = document.getElementById(
+          `descrizione${id}`
+        ).value;
+        row.dataset.originalTipoIncasso = document.getElementById(
+          `tipoIncasso${id}`
+        ).value;
+        row.dataset.originalTipoPagamento = document.getElementById(
+          `tipoPagamento${id}`
+        ).value;
+        row.dataset.originalTipoDocumento = document.getElementById(
+          `tipoDocumento${id}`
+        ).value;
+
+        // Nasconde le celle in modalità "view" e mostra quelle in modalità "edit"
+        row
+          .querySelectorAll(".view")
+          .forEach((cell) => (cell.style.display = "none"));
+        row
+          .querySelectorAll(".edit")
+          .forEach((cell) => (cell.style.display = "table-cell"));
+
+        // Mostra l'icona di salvataggio e nasconde l'icona di modifica
+        const saveIcon = row.querySelector(".fa-save");
+        const editIcon = row.querySelector(".fa-edit");
+
+        if (saveIcon) saveIcon.style.display = "inline-block";
+        if (editIcon) editIcon.style.display = "none";
       }
 
       // Funzione per salvare le modifiche  degli incassi
-      function salvaModifiche(index) {
-        const row = document.querySelectorAll("tr")[index];
-        const editCells = row.querySelectorAll(".edit");
-        const viewCells = row.querySelectorAll(".view");
+      function salvaModifiche(id) {
+        const importoInput = document.getElementById(`importo${id}`);
+        const descrizioneInput = document.getElementById(`descrizione${id}`);
 
-        // Prendi i nuovi valori dai campi di input
-        const importo = editCells[0].querySelector("input").value;
-        const tipoIncasso = editCells[1].querySelector("input").value;
-        const tipoPagamento = editCells[2].querySelector("input").value;
-        const tipoDocumento = editCells[3].querySelector("input").value;
-        const descrizione = editCells[4].querySelector("input").value;
+        if (!importoInput || !descrizioneInput) {
+          console.error(`Campi per l'incasso con ID ${id} non trovati.`);
+          return;
+        }
 
-        // Salva i nuovi dati nel localStorage
-        const currentTime = new Date().toLocaleTimeString("it-IT");
+        const importo = parseFloat(importoInput.value);
+        const descrizione = descrizioneInput.value;
 
-        // Aggiorna il row con i nuovi valori
-        row.querySelector(".view:nth-child(1)").innerHTML = `€ ${parseFloat(
-          importo
-        ).toFixed(2)}`;
-        row.querySelector(".view:nth-child(2)").innerHTML = tipoIncasso;
-        row.querySelector(".view:nth-child(3)").innerHTML = tipoPagamento;
-        row.querySelector(".view:nth-child(4)").innerHTML = tipoDocumento;
-        row.querySelector(".view:nth-child(5)").innerHTML = descrizione;
-        row.querySelector(".view:nth-child(6)").innerHTML = currentTime;
+        const tipoIncasso =
+          tipoIncassoMapInverse[
+            document.getElementById(`tipoIncasso${id}`).value
+          ] || document.getElementById(`tipoIncasso${id}`).value;
+        const tipoPagamento =
+          tipoPagamentoMapInverse[
+            document.getElementById(`tipoPagamento${id}`).value
+          ] || document.getElementById(`tipoPagamento${id}`).value;
+        const tipoDocumento =
+          tipoDocumentoMapInverse[
+            document.getElementById(`tipoDocumento${id}`).value
+          ] || document.getElementById(`tipoDocumento${id}`).value;
 
-        // Riporta la tabella alla modalità di visualizzazione
-        viewCells.forEach((cell) => (cell.style.display = "table-cell"));
-        editCells.forEach((cell) => (cell.style.display = "none"));
+        // Crea un oggetto con i dati aggiornati
+        const dataToSend = {
+          importo,
+          tipoIncasso,
+          tipoPagamento,
+          tipoDocumento,
+          descrizione,
+          ora: new Date().toLocaleTimeString("it-IT"),
+        };
 
-        // Nascondi le icone di salvataggio/annullamento e mostra quelle di modifica/eliminazione
-        row.querySelector(".view i").style.display = "inline-block";
-        row.querySelector(".edit i").style.display = "none";
+        // Invia i dati al server
+        fetch(`/api/incassi/${id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(dataToSend),
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Errore durante la modifica dell'incasso");
+            }
+            return response.json();
+          })
+          .then((result) => {
+            if (result.success) {
+              alert("Incasso modificato con successo");
+              caricaIncassi(new Date().toISOString().split("T")[0]); // Ricarica la lista
+            } else {
+              console.error(result.message);
+            }
+          })
+          .catch((error) => {
+            alert("Impossibile completare l'operazione. Riprova più tardi.");
+            console.error("Errore durante la chiamata API:", error);
+          });
       }
 
       // Funzione per annullare le modifiche  degli incassi
-      function annullaModifiche(index) {
-        const row = document.querySelectorAll("tr")[index];
-        const editCells = row.querySelectorAll(".edit");
-        const viewCells = row.querySelectorAll(".view");
+      function annullaModifiche(id) {
+        const row = document.querySelector(`tr[data-id="${id}"]`);
+        if (!row) {
+          console.error(`Riga con ID ${id} non trovata.`);
+          return;
+        }
 
-        // Riporta la tabella alla modalità di visualizzazione senza salvare le modifiche
-        viewCells.forEach((cell) => (cell.style.display = "table-cell"));
-        editCells.forEach((cell) => (cell.style.display = "none"));
+        // Ripristina i valori originali delle select
+        const tipoIncassoSelect = document.getElementById(`tipoIncasso${id}`);
+        const tipoPagamentoSelect = document.getElementById(
+          `tipoPagamento${id}`
+        );
+        const tipoDocumentoSelect = document.getElementById(
+          `tipoDocumento${id}`
+        );
 
-        // Nascondi le icone di salvataggio/annullamento e mostra quelle di modifica/eliminazione
-        row.querySelector(".view i").style.display = "inline-block";
-        row.querySelector(".edit i").style.display = "none";
+        if (tipoIncassoSelect) {
+          tipoIncassoSelect.value = row.dataset.originalTipoIncasso;
+        }
+        if (tipoPagamentoSelect) {
+          tipoPagamentoSelect.value = row.dataset.originalTipoPagamento;
+        }
+        if (tipoDocumentoSelect) {
+          tipoDocumentoSelect.value = row.dataset.originalTipoDocumento;
+        }
+
+        // Ripristina i valori originali di importo e descrizione
+        const importoInput = document.getElementById(`importo${id}`);
+        const descrizioneInput = document.getElementById(`descrizione${id}`);
+
+        if (importoInput) {
+          importoInput.value = row.dataset.originalImporto;
+        }
+        if (descrizioneInput) {
+          descrizioneInput.value = row.dataset.originalDescrizione;
+        }
+
+        // Ripristina la modalità visualizzazione
+        row
+          .querySelectorAll(".view")
+          .forEach((cell) => (cell.style.display = "table-cell"));
+        row
+          .querySelectorAll(".edit")
+          .forEach((cell) => (cell.style.display = "none"));
+
+        // Gestisci le icone
+        const saveIcon = row.querySelector(".fa-save");
+        const editIcon = row.querySelector(".fa-edit");
+
+        if (saveIcon) saveIcon.style.display = "none";
+        if (editIcon) editIcon.style.display = "inline-block";
+
+        console.log(`Modifiche annullate per la riga con ID ${id}.`);
+      }
+
+      // Funzione per rimuovere un incasso
+      function rimuoviIncasso(id) {
+        if (!confirm("Sei sicuro di voler rimuovere questo incasso?")) {
+          return; // Esci se l'utente annulla
+        }
+
+        fetch(`/api/incassi/${id}`, {
+          method: "DELETE",
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Errore durante la rimozione dell'incasso");
+            }
+            return response.json();
+          })
+          .then((result) => {
+            if (result.success) {
+              alert("Incasso rimosso con successo");
+              caricaIncassi(new Date().toISOString().split("T")[0]); // Ricarica la lista degli incassi
+            } else {
+              console.error(result.message);
+            }
+          })
+          .catch((error) => {
+            console.error("Errore durante la chiamata API:", error);
+          });
       }
 
       // =============================

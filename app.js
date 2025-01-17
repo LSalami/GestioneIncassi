@@ -15,7 +15,8 @@ app.use(
     cookie: {
       secure: false, // Impostare su true in produzione con HTTPS
       httpOnly: true, // Impedisce accessi JavaScript ai cookie
-      maxAge: 3600000, // Scadenza della sessione (1 ora)
+      maxAge: 3600 * 1000, // Scadenza della sessione (1 ora)
+      rolling: true, // Ogni richiesta rinnova la sessione
     },
   })
 );
@@ -148,6 +149,80 @@ app.get("/api/incassi/:data", async (req, res) => {
     res.json({ success: true, incassi: result.rows });
   } catch (error) {
     console.error("Errore durante il caricamento degli incassi:", error);
+    res.status(500).json({ success: false, message: "Errore del server" });
+  }
+});
+
+// API per rimuovere un incasso
+app.delete("/api/incassi/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const query = "DELETE FROM incassi WHERE id = $1 RETURNING *";
+    const result = await pool.query(query, [id]);
+
+    if (result.rowCount === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Incasso non trovato" });
+    }
+
+    res.json({ success: true, message: "Incasso rimosso con successo" });
+  } catch (error) {
+    console.error("Errore durante la rimozione dell'incasso:", error);
+    res.status(500).json({ success: false, message: "Errore del server" });
+  }
+});
+
+// API per modificare un incasso
+app.put("/api/incassi/:id", async (req, res) => {
+  const { id } = req.params;
+  const {
+    importo,
+    tipoIncasso,
+    tipoPagamento,
+    tipoDocumento,
+    descrizione,
+    ora,
+  } = req.body;
+
+  try {
+    const query = `
+      UPDATE incassi 
+      SET 
+        importo = $1, 
+        tipo_incasso = $2, 
+        tipo_pagamento = $3, 
+        tipo_documento = $4, 
+        descrizione = $5, 
+        ora = $6
+      WHERE id = $7
+      RETURNING *;
+    `;
+
+    const result = await pool.query(query, [
+      importo,
+      tipoIncasso,
+      tipoPagamento,
+      tipoDocumento,
+      descrizione,
+      ora,
+      id,
+    ]);
+
+    if (result.rowCount === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Incasso non trovato" });
+    }
+
+    res.json({
+      success: true,
+      message: "Incasso modificato con successo",
+      incasso: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Errore durante la modifica dell'incasso:", error);
     res.status(500).json({ success: false, message: "Errore del server" });
   }
 });
