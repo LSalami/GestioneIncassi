@@ -944,6 +944,52 @@
           });
       });
 
+      // Durata della sessione (in millisecondi)
+      const sessionTimeout = 3600000; // 1 ora (3600 secondi * 1000)
+
+      // Variabile per il timer
+      let sessionTimer;
+
+      // Funzione per resettare il timer
+      function resetSessionTimer() {
+        // Cancella il timer precedente
+        if (sessionTimer) {
+          clearTimeout(sessionTimer);
+        }
+
+        // Imposta un nuovo timer
+        sessionTimer = setTimeout(() => {
+          redirectToLogin();
+        }, sessionTimeout);
+      }
+
+      // Funzione per reindirizzare al login
+      function redirectToLogin() {
+        window.location.href = "/login.html";
+      }
+
+      // Aggiungi gli eventi per rilevare l'attività dell'utente
+      function setupSessionTimeoutHandler() {
+        const events = [
+          "mousemove",
+          "keydown",
+          "click",
+          "scroll",
+          "touchstart",
+        ];
+        events.forEach((event) => {
+          window.addEventListener(event, resetSessionTimer);
+        });
+
+        // Imposta il primo timer all'avvio
+        resetSessionTimer();
+      }
+
+      // Inizializza il gestore della sessione al caricamento della pagina
+      document.addEventListener("DOMContentLoaded", () => {
+        setupSessionTimeoutHandler();
+      });
+
       function redirectToLogin() {
         // Reindirizza alla pagina di login
         window.location.href = "/login.html";
@@ -961,7 +1007,16 @@
           return;
         }
 
-        const currentDate = new Date().toISOString().split("T")[0];
+        const currentDate = new Date()
+          .toLocaleDateString("it-IT", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+          })
+          .split("/")
+          .reverse()
+          .join("-");
+
         form.classList.toggle("d-none", selectedDate !== currentDate);
       }
     </script>
