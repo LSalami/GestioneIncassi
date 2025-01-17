@@ -436,25 +436,23 @@
         const formData = getFormData(); // Ottieni i dati dal form
 
         const currentTime = new Date().toLocaleTimeString("it-IT");
-        const currentDate = new Date().toLocaleDateString("it-IT", {
-          weekday: "long",
-          day: "2-digit",
-          month: "long",
-          year: "numeric",
-        });
-        const currentDateISO = new Date().toISOString().split("T")[0]; // Ottieni la data in formato YYYY-MM-DD
-        const currentTimeISO = new Date()
-          .toISOString()
-          .split("T")[1]
-          .split(".")[0]; // Ottieni l'ora in formato HH:MM:SS
+        const currentDate = new Date()
+          .toLocaleDateString("it-IT", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+          })
+          .split("/")
+          .reverse()
+          .join("-");
 
         formData.operatoreId = userId;
         formData.operatoreNome = userName;
 
         const dataToSend = {
           ...formData,
-          data: currentDateISO,
-          ora: currentTimeISO,
+          data: currentDate,
+          ora: currentTime,
         };
 
         let hasError = false;
@@ -510,7 +508,7 @@
             .then((result) => {
               if (result.success) {
                 showSuccessMessage("Incasso salvato con successo!");
-                caricaIncassi(currentDateISO); // Ricarica la tabella
+                caricaIncassi(currentDate); // Ricarica la tabella
                 resetFormState("incasso-form"); // Resetta il form
               } else {
                 console.error("Errore durante il salvataggio:", result.message);
@@ -607,14 +605,6 @@
                   tipoDocumentoMap[incasso.tipo_documento] ||
                   incasso.tipo_documento;
 
-                // Formattare l'ora nel fuso orario locale
-                const oraFormatted = new Intl.DateTimeFormat("it-IT", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  second: "2-digit",
-                  hour12: false,
-                }).format(new Date(`${date}T${incasso.ora}Z`));
-
                 const row = document.createElement("tr");
                 row.innerHTML = `
                 <!-- Colonne in modalità view -->
@@ -681,7 +671,7 @@
                 </td>
 
                 <td>${incasso.nome_utente || "Non specificato"}</td>
-                <td>${oraFormatted}</td>
+                <td>${incasso.ora}</td>
 
                 <!-- Icone per Modifica e Elimina in modalità view -->
                 <td class="text-end view">
@@ -782,17 +772,6 @@
         // Nascondi le icone di salvataggio/annullamento e mostra quelle di modifica/eliminazione
         row.querySelector(".view i").style.display = "inline-block";
         row.querySelector(".edit i").style.display = "none";
-
-        // Aggiorna i dati nel localStorage
-        aggiornaStorage(
-          index,
-          importo,
-          tipoIncasso,
-          tipoPagamento,
-          tipoDocumento,
-          descrizione,
-          currentTime
-        );
       }
 
       function annullaModifiche(index) {
@@ -807,31 +786,6 @@
         // Nascondi le icone di salvataggio/annullamento e mostra quelle di modifica/eliminazione
         row.querySelector(".view i").style.display = "inline-block";
         row.querySelector(".edit i").style.display = "none";
-      }
-
-      function aggiornaStorage(
-        index,
-        importo,
-        tipoIncasso,
-        tipoPagamento,
-        tipoDocumento,
-        descrizione,
-        ora
-      ) {
-        const currentDateISO = new Date().toISOString().split("T")[0];
-        let data = JSON.parse(localStorage.getItem("incassi")) || {};
-
-        // Aggiungi i nuovi dati nell'array
-        data[currentDateISO][index] = {
-          importo,
-          tipoIncasso,
-          tipoPagamento,
-          tipoDocumento,
-          descrizione,
-          ora,
-        };
-
-        localStorage.setItem("incassi", JSON.stringify(data));
       }
 
       let userId = null;
