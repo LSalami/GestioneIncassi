@@ -417,7 +417,7 @@
       }
 
       // Validazione dell'importo
-      function validateImporto(input) {
+      function validateImporto(input, isEdit = false) {
         input.value = input.value
           .replace(/[^0-9.,]/g, "") // Solo numeri, punto e virgola
           .replace(/,/g, ".") // Converte la virgola in punto
@@ -427,13 +427,23 @@
 
         const value = parseFloat(input.value);
         if (isNaN(value) || value <= 0) {
-          showFieldError(
-            "importo",
-            "importo-error",
-            "Inserisci un importo valido e positivo."
-          );
+          if (isEdit) {
+            input.classList.add("is-invalid"); // Classe di errore Bootstrap
+            input.classList.remove("is-valid"); // Rimuove eventuale stato di successo
+          } else {
+            showFieldError(
+              "importo",
+              "importo-error",
+              "Inserisci un importo valido e positivo."
+            );
+          }
         } else {
-          clearFieldError("importo", "importo-error");
+          if (isEdit) {
+            input.classList.add("is-valid"); // Classe di successo Bootstrap
+            input.classList.remove("is-invalid"); // Rimuove eventuale stato di errore
+          } else {
+            clearFieldError("importo", "importo-error");
+          }
         }
       }
 
@@ -629,6 +639,7 @@
           .then((data) => {
             if (data.success) {
               aggiornaTabellaIncassi(data.incassi);
+              aggiungiEventiSelect(); // Aggiungi eventi dopo aver creato gli elementi
             }
           })
           .catch((error) => {
@@ -687,10 +698,10 @@
                   <div class="input-group-prepend">
                     <span class="input-group-text text-sm" id="basic-addon1" style="font-size: 0.8rem;">&euro;</span>
                   </div>
-                  <input type="text" class="form-control form-control-sm" 
+                  <input type="text" class="form-control form-control-sm"
                     id="importo${incasso.id}"
                     placeholder="Inserisci importo" required
-                    oninput="validateImporto(this)"
+                    oninput="validateImporto(this, true)"
                     value="${importo.toFixed(2)}" />
                 </div>
               </td>
@@ -712,7 +723,7 @@
               <!-- Tipo Pagamento - Menu a tendina  -->
               <td class="edit">
                 <select
-                  id="tipoPagamento${incasso.id}" 
+                  id="tipoPagamento${incasso.id}"
                   class="form-control form-control-sm">
                   <option ${
                     tipoPagamentoFormatted === "Contanti" ? "selected" : ""
@@ -739,7 +750,7 @@
               <td class="edit">
                 <input type="text" class="form-control form-control-sm"
                   id="descrizione${incasso.id}"
-                  placeholder="Inserire numero pratica" 
+                  placeholder="Inserire numero pratica"
                   value="${incasso.descrizione}" />
               </td>
 
@@ -815,6 +826,19 @@
         row
           .querySelectorAll(".edit")
           .forEach((cell) => (cell.style.display = "table-cell"));
+
+        // Valida e aggiorna lo stato del textbox Importo
+        const importoInput = document.getElementById(`importo${id}`);
+        if (importoInput) {
+          const value = parseFloat(importoInput.value);
+          if (!isNaN(value) && value > 0) {
+            importoInput.classList.add("is-valid"); // Aggiunge lo stato valido
+            importoInput.classList.remove("is-invalid"); // Rimuove lo stato di errore
+          } else {
+            importoInput.classList.add("is-invalid"); // Aggiunge lo stato di errore
+            importoInput.classList.remove("is-valid"); // Rimuove lo stato valido
+          }
+        }
 
         // Mostra l'icona di salvataggio e nasconde l'icona di modifica
         const saveIcon = row.querySelector(".fa-save");
@@ -940,8 +964,6 @@
 
         if (saveIcon) saveIcon.style.display = "none";
         if (editIcon) editIcon.style.display = "inline-block";
-
-        console.log(`Modifiche annullate per la riga con ID ${id}.`);
       }
 
       // Funzione per rimuovere un incasso
@@ -1060,6 +1082,42 @@
           modalElement.hide();
         };
         modalElement.show();
+      }
+
+      function aggiungiEventiSelect() {
+        // Seleziona tutti i menu a tendina per tipo incasso e tipo pagamento
+        const incassoSelects = document.querySelectorAll('[id^="tipoIncasso"]');
+        const pagamentoSelects = document.querySelectorAll(
+          '[id^="tipoPagamento"]'
+        );
+
+        incassoSelects.forEach((tipoIncassoSelect) => {
+          const id = tipoIncassoSelect.id.replace("tipoIncasso", "");
+          const tipoPagamentoSelect = document.getElementById(
+            `tipoPagamento${id}`
+          );
+
+          if (tipoPagamentoSelect) {
+            // Aggiungi evento "change" su tipoIncasso
+            tipoIncassoSelect.addEventListener("change", () => {
+              if (
+                tipoIncassoSelect.value === "Uscite" &&
+                tipoPagamentoSelect.value === "POS"
+              ) {
+                tipoPagamentoSelect.value = "Contanti";
+              }
+            });
+            // Aggiungi evento "change" su tipoPagamento
+            tipoPagamentoSelect.addEventListener("change", () => {
+              if (
+                tipoIncassoSelect.value === "Uscite" &&
+                tipoPagamentoSelect.value === "POS"
+              ) {
+                tipoIncassoSelect.value = "Entrate";
+              }
+            });
+          }
+        });
       }
     </script>
   </body>
