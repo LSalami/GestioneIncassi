@@ -287,6 +287,7 @@
 
       let userId = null;
       let userName = null;
+      let userPower = null;
 
       // =============================
       // Inizializzazione della Pagina
@@ -367,9 +368,6 @@
           },
         });
 
-        toggleFormVisibility(formattedToday);
-        caricaIncassi(formattedToday);
-
         fetch("/api/utente")
           .then((response) => {
             if (!response.ok) {
@@ -381,6 +379,8 @@
             if (data.success) {
               userId = data.userId; // Salva l'ID utente
               userName = data.userName; // Salva il nome utente
+              userPower = data.userPower; // Salva il livello di potere
+
               // Aggiorna l'interfaccia utente con il nome
               document.getElementById(
                 "user-name"
@@ -398,6 +398,9 @@
               "Utente non configurato";
             redirectToLogin();
           });
+
+        toggleFormVisibility(formattedToday);
+        caricaIncassi(formattedToday);
       });
 
       // =============================
@@ -658,9 +661,33 @@
         let totaleCassa = 0;
         let totaleContanti = 0;
         let totalePOS = 0;
+        const today = new Date().toLocaleDateString("it-IT", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        });
 
         incassi.forEach((incasso, index) => {
+          // Controlla se l'utente ha accesso a questa riga
+          const isOwner = incasso.id_operatore === userId; // Verifica se l'utente ha creato l'incasso
+          const isAdmin = userPower === 1;
+
+          // Verifica il livello di potere dell'utente e filtra le righe
+          if (userPower === 0 && incasso.livello_potere !== 0) {
+            return; // Utente con potere 0 non può vedere righe con potere 1
+          }
+
           const importo = parseFloat(incasso.importo);
+          const incassoDate = new Date(incasso.data).toLocaleDateString(
+            "it-IT",
+            {
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+            }
+          );
+          const isToday = incassoDate === today; // Verifica se l'incasso è di oggi
+
           if (incasso.tipo_incasso === "uscite") {
             if (incasso.tipo_pagamento === "contanti") {
               totaleCassa -= importo;
@@ -761,12 +788,18 @@
               <!-- Icone per Modifica e Elimina in modalità view -->
               <td class="text-end view">
                 <div style="white-space: nowrap">
-                  <i class="fas fa-edit text-warning me-2"
-                    onclick="modificaIncasso(${incasso.id})"
-                    style="cursor: pointer;"></i>
-                  <i class="fas fa-trash-alt text-danger"
-                    onclick="rimuoviIncasso(${incasso.id})"
-                    style="cursor: pointer;"></i>
+                  ${
+                    isToday && (isOwner || isAdmin)
+                      ? `
+                    <i class="fas fa-edit text-warning me-2"
+                      onclick="modificaIncasso(${incasso.id})"
+                      style="cursor: pointer;"></i>
+                    <i class="fas fa-trash-alt text-danger"
+                      onclick="rimuoviIncasso(${incasso.id})"
+                      style="cursor: pointer;"></i>
+                    `
+                      : ""
+                  }
                 </div>
               </td>
 
@@ -933,7 +966,17 @@
           .then((result) => {
             if (result.success) {
               alert("Incasso modificato con successo");
-              caricaIncassi(new Date().toISOString().split("T")[0]); // Ricarica la lista
+              caricaIncassi(
+                new Date()
+                  .toLocaleDateString("it-IT", {
+                    year: "numeric",
+                    month: "2-digit",
+                    day: "2-digit",
+                  })
+                  .split("/")
+                  .reverse()
+                  .join("-")
+              );
             } else {
               console.error(result.message);
             }
@@ -1058,7 +1101,17 @@
           .then((result) => {
             if (result.success) {
               alert("Incasso rimosso con successo");
-              caricaIncassi(new Date().toISOString().split("T")[0]); // Ricarica la lista degli incassi
+              caricaIncassi(
+                new Date()
+                  .toLocaleDateString("it-IT", {
+                    year: "numeric",
+                    month: "2-digit",
+                    day: "2-digit",
+                  })
+                  .split("/")
+                  .reverse()
+                  .join("-")
+              );
             } else {
               console.error(result.message);
             }

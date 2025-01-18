@@ -64,7 +64,7 @@ app.post("/login", async (req, res) => {
 
   try {
     const query =
-      "SELECT id, nome_utente FROM utenti WHERE codice_accesso = $1";
+      "SELECT id, nome_utente, livello_potere FROM utenti WHERE codice_accesso = $1";
     const result = await pool.query(query, [codice_accesso]);
 
     if (result.rows.length === 0) {
@@ -73,15 +73,15 @@ app.post("/login", async (req, res) => {
         .json({ success: false, message: "Utente non trovato" });
     }
 
-    const { id, nome_utente } = result.rows[0];
+    const { id, nome_utente, livello_potere } = result.rows[0];
     req.session.userId = id; // Salva l'ID utente nella sessione
     req.session.userName = nome_utente; // Salva il nome utente nella sessione
+    req.session.userPower = livello_potere; // Salva il livello di potere dell'utente nella sessione
 
+    // Risposta JSON con reindirizzamento alla dashboard
     res.json({
       success: true,
       redirect: "/dashboard.html",
-      id: id,
-      nomeUtente: nome_utente,
     });
   } catch (error) {
     console.error("Errore durante il login:", error);
@@ -133,7 +133,8 @@ app.get("/api/incassi/:data", async (req, res) => {
     const query = `
       SELECT 
         incassi.*, 
-        utenti.nome_utente AS nome_utente
+        utenti.nome_utente AS nome_utente,
+        utenti.livello_potere AS livello_potere
       FROM 
         incassi
       JOIN 
@@ -240,19 +241,17 @@ app.use(
   express.static("public/dashboard.html")
 );
 
-// Ritorna il nome utente dalla sessione
+// Ritorna l'utente dalla sessione
 app.get("/api/utente", (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ success: false, message: "Non autenticato" });
   }
-  // aggiunta console log per debug
-  console.log("req.session.userId", req.session.userId);
-  console.log("req.session.userName", req.session.userName);
 
   res.json({
     success: true,
     userId: req.session.userId,
     userName: req.session.userName,
+    userPower: req.session.userPower,
   });
 });
 
