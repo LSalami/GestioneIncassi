@@ -827,24 +827,56 @@
           .querySelectorAll(".edit")
           .forEach((cell) => (cell.style.display = "table-cell"));
 
+        // Disabilita le altre righe
+        const otherRows = document.querySelectorAll(
+          `tr[data-id]:not([data-id="${id}"])`
+        );
+        otherRows.forEach((otherRow) => {
+          otherRow
+            .querySelectorAll(".fa-edit, .fa-trash-alt")
+            .forEach((icon) => {
+              icon.style.pointerEvents = "none";
+              icon.style.opacity = "0.5";
+            });
+        });
+
+        // Disabilita il pulsante Salva per nuovi incassi
+        const saveButton = document.querySelector(
+          "#incasso-form button[type='submit']"
+        );
+        if (saveButton) {
+          saveButton.disabled = true;
+          saveButton.style.pointerEvents = "none";
+          saveButton.style.opacity = "0.5";
+        }
+
         // Valida e aggiorna lo stato del textbox Importo
         const importoInput = document.getElementById(`importo${id}`);
+        const saveIcon = row.querySelector(".fa-save");
+
         if (importoInput) {
-          const value = parseFloat(importoInput.value);
-          if (!isNaN(value) && value > 0) {
-            importoInput.classList.add("is-valid"); // Aggiunge lo stato valido
-            importoInput.classList.remove("is-invalid"); // Rimuove lo stato di errore
-          } else {
-            importoInput.classList.add("is-invalid"); // Aggiunge lo stato di errore
-            importoInput.classList.remove("is-valid"); // Rimuove lo stato valido
-          }
+          importoInput.addEventListener("input", () => {
+            const value = parseFloat(importoInput.value);
+            if (isNaN(value) || value <= 0) {
+              importoInput.classList.add("is-invalid"); // Aggiunge lo stato di errore
+              importoInput.classList.remove("is-valid"); // Rimuove lo stato valido
+              saveIcon.style.pointerEvents = "none"; // Disabilita il clic sull'icona di salvataggio
+              saveIcon.style.opacity = "0.5"; // Riduce la visibilità dell'icona
+            } else {
+              importoInput.classList.add("is-valid"); // Aggiunge lo stato valido
+              importoInput.classList.remove("is-invalid"); // Rimuove lo stato di errore
+              saveIcon.style.pointerEvents = "auto"; // Abilita il clic sull'icona di salvataggio
+              saveIcon.style.opacity = "1"; // Ripristina la visibilità dell'icona
+            }
+          });
+
+          // Trigger iniziale per gestire il caso in cui il valore sia già vuoto o 0
+          importoInput.dispatchEvent(new Event("input"));
         }
 
         // Mostra l'icona di salvataggio e nasconde l'icona di modifica
-        const saveIcon = row.querySelector(".fa-save");
-        const editIcon = row.querySelector(".fa-edit");
-
         if (saveIcon) saveIcon.style.display = "inline-block";
+        const editIcon = row.querySelector(".fa-edit");
         if (editIcon) editIcon.style.display = "none";
       }
 
@@ -910,6 +942,27 @@
             alert("Impossibile completare l'operazione. Riprova più tardi.");
             console.error("Errore durante la chiamata API:", error);
           });
+
+        // Rimuovi le restrizioni su altre righe
+        const otherRows = document.querySelectorAll(`tr[data-id]`);
+        otherRows.forEach((otherRow) => {
+          otherRow
+            .querySelectorAll(".fa-edit, .fa-trash-alt")
+            .forEach((icon) => {
+              icon.style.pointerEvents = "auto";
+              icon.style.opacity = "1";
+            });
+        });
+
+        // Abilita il pulsante Salva per nuovi incassi
+        const saveButton = document.querySelector(
+          "#incasso-form button[type='submit']"
+        );
+        if (saveButton) {
+          saveButton.disabled = false;
+          saveButton.style.pointerEvents = "auto";
+          saveButton.style.opacity = "1";
+        }
       }
 
       // Funzione per annullare le modifiche  degli incassi
@@ -964,6 +1017,27 @@
 
         if (saveIcon) saveIcon.style.display = "none";
         if (editIcon) editIcon.style.display = "inline-block";
+
+        // Rimuovi le restrizioni su altre righe
+        const otherRows = document.querySelectorAll(`tr[data-id]`);
+        otherRows.forEach((otherRow) => {
+          otherRow
+            .querySelectorAll(".fa-edit, .fa-trash-alt")
+            .forEach((icon) => {
+              icon.style.pointerEvents = "auto";
+              icon.style.opacity = "1";
+            });
+        });
+
+        // Abilita il pulsante Salva per nuovi incassi
+        const saveButton = document.querySelector(
+          "#incasso-form button[type='submit']"
+        );
+        if (saveButton) {
+          saveButton.disabled = false;
+          saveButton.style.pointerEvents = "auto";
+          saveButton.style.opacity = "1";
+        }
       }
 
       // Funzione per rimuovere un incasso
