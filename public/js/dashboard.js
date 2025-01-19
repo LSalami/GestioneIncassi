@@ -62,6 +62,12 @@ document.addEventListener("DOMContentLoaded", function () {
     avviaRicerca();
   });
 
+  const searchYearInput = document.getElementById("search-year");
+  if (searchYearInput) {
+    const currentYear = new Date().getFullYear();
+    searchYearInput.value = currentYear;
+  }
+
   const tipoIncassoRadios = document.getElementsByName("tipo-incasso");
   const tipoPagamentoRadios = document.getElementsByName("tipo-pagamento");
 
