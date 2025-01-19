@@ -1,0 +1,70 @@
+.alert {
+  animation: fade-out 3s forwards;
+}
+
+@keyframes fade-out {
+  0% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+#user-info {
+  font-size: 1rem;
+  margin-right: 1rem;
+}
+
+#user-name {
+  color: #555; /* Colore per una visibilità chiara */
+}
+
+.edit {
+  display: none;
+}
+
+.view {
+  display: table-cell; /* Le celle in modalità view sono visibili di default */
+}
+
+.input-group-sm .input-group-prepend,
+.input-group-sm .input-group-text {
+  border-radius: 0;
+  border-top-left-radius: 0.25rem; /* Arrotonda l'angolo in alto a sinistra */
+  border-bottom-left-radius: 0.25rem; /* Arrotonda l'angolo in basso a sinistra */
+}
+
+.form-control-sm,
+.input-group-sm .form-control-sm,
+.input-group-sm .input-group-text {
+  height: 31px; /* Uniforma l'altezza */
+  line-height: normal; /* Assicura che il testo sia centrato verticalmente */
+}
+
+.search-box {
+  border: 1px solid #ccc; /* Bordo grigio chiaro */
+  border-radius: 0.5rem; /* Angoli arrotondati */
+  background-color: #f9f9f9; /* Colore di sfondo */
+  cursor: pointer; /* Mostra il puntatore quando si passa sopra */
+  transition: all 0.3s ease; /* Transizione per l'effetto hover */
+}
+
+.search-box:hover {
+  background-color: #0d6efd; /* Cambia il colore di sfondo al passaggio */
+  border-color: #0b5ed7; /* Cambia il colore del bordo */
+  color: white; /* Cambia il colore del testo e dell'icona */
+}
+
+.search-box i,
+.search-box .text {
+  transition: color 0.3s ease; /* Effetto di transizione sul colore */
+}
+
+.search-box:hover i,
+.search-box:hover .text {
+  color: white; /* Colore bianco al passaggio */
+}
