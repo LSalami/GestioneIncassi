@@ -228,6 +228,89 @@ app.put("/api/incassi/:id", async (req, res) => {
   }
 });
 
+// API per aggiornare il totale della cassa
+app.put("/api/aggiorna-totale-cassa", async (req, res) => {
+  const { importo, operazione } = req.body;
+
+  if (!importo || !operazione) {
+    return res.status(400).json({
+      success: false,
+      message: "Importo o operazione non forniti",
+    });
+  }
+
+  // Validazione dell'operazione
+  if (!["somma", "sottrazione"].includes(operazione)) {
+    return res.status(400).json({
+      success: false,
+      message: "Operazione non valida. Usa 'somma' o 'sottrazione'.",
+    });
+  }
+
+  try {
+    let query;
+    const params = [importo];
+
+    // Imposta la query in base all'operazione
+    if (operazione === "somma") {
+      query =
+        "UPDATE cassa SET totale = totale + $1, data_aggiornamento = NOW()";
+    } else if (operazione === "sottrazione") {
+      query =
+        "UPDATE cassa SET totale = totale - $1, data_aggiornamento = NOW()";
+    }
+
+    // Esegui la query
+    const result = await pool.query(query, params);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Totale cassa non trovato",
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Totale cassa aggiornato con successo",
+    });
+  } catch (error) {
+    console.error("Errore durante l'aggiornamento del totale cassa:", error);
+    res.status(500).json({
+      success: false,
+      message: "Errore del server durante l'aggiornamento del totale cassa",
+    });
+  }
+});
+
+// API per ottenere il totale della cassa
+app.get("/api/totale-cassa", async (req, res) => {
+  try {
+    const query = "SELECT totale, data_aggiornamento FROM cassa LIMIT 1";
+    const result = await pool.query(query);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Totale cassa non trovato",
+      });
+    }
+
+    const { totale, data_aggiornamento } = result.rows[0];
+    res.json({
+      success: true,
+      totale,
+      dataAggiornamento: data_aggiornamento,
+    });
+  } catch (error) {
+    console.error("Errore durante il recupero del totale cassa:", error);
+    res.status(500).json({
+      success: false,
+      message: "Errore del server durante il recupero del totale cassa",
+    });
+  }
+});
+
 // Logout
 app.get("/logout", (req, res) => {
   req.session.destroy((err) => {

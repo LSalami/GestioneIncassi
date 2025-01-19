@@ -674,6 +674,13 @@
             .then((response) => response.json())
             .then((result) => {
               if (result.success) {
+                if (formData.tipoPagamento === "contanti") {
+                  if (formData.tipoIncasso === "entrate") {
+                    aggiornaTotaleCassa(formData.importo, "somma");
+                  } else if (formData.tipoIncasso === "uscite") {
+                    aggiornaTotaleCassa(formData.importo, "sottrazione");
+                  }
+                }
                 showSuccessMessage("Incasso salvato con successo!");
                 caricaIncassi(currentDate); // Ricarica la tabella
                 resetFormState("incasso-form"); // Resetta il form
@@ -690,19 +697,41 @@
       // Genera HTML per il modal di conferma
       function generateConfirmHTML(data) {
         return `
-          <ul>
-            <li><strong>Importo:</strong> € ${data.importo.toFixed(2)}</li>
-            <li><strong>Tipo Incasso:</strong> ${
-              tipoIncassoMap[data.tipoIncasso]
-            }</li>
-            <li><strong>Tipo Pagamento:</strong> ${
-              tipoPagamentoMap[data.tipoPagamento]
-            }</li>
-            <li><strong>Tipo Documento:</strong> ${
-              tipoDocumentoMap[data.tipoDocumento]
-            }</li>
-            <li><strong>Descrizione:</strong> ${data.descrizione}</li>
-          </ul>`;
+              <ul>
+                <li><strong>Importo:</strong> € ${data.importo.toFixed(2)}</li>
+                <li><strong>Tipo Incasso:</strong> ${
+                  tipoIncassoMap[data.tipoIncasso]
+                }</li>
+                <li><strong>Tipo Pagamento:</strong> ${
+                  tipoPagamentoMap[data.tipoPagamento]
+                }</li>
+                <li><strong>Tipo Documento:</strong> ${
+                  tipoDocumentoMap[data.tipoDocumento]
+                }</li>
+                <li><strong>Descrizione:</strong> ${data.descrizione}</li>
+              </ul>`;
+      }
+
+      // Fuzione per aggiornare il totale cassa
+      function aggiornaTotaleCassa(importo, operazione) {
+        fetch("/api/aggiorna-totale-cassa", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ importo, operazione }),
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+          })
+          .then((data) => {})
+          .catch((error) =>
+            console.error(
+              "Errore durante l'aggiornamento del totale cassa:",
+              error
+            )
+          );
       }
 
       // Funzione per caricare gli incassi
@@ -728,9 +757,22 @@
         const list = document.getElementById("incassi-list");
         list.innerHTML = "";
 
-        let totaleCassa = 0;
+        fetch(`/api/totale-cassa`)
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              let totaleCassa = data.totale;
+              document.getElementById("totale-cassa").innerText = parseFloat(
+                totaleCassa || 0
+              ).toFixed(2);
+            }
+          })
+          .catch((error) => {
+            console.error("Errore durante il calcolo del totale:", error);
+          });
         let totaleContanti = 0;
         let totalePOS = 0;
+
         const today = new Date().toLocaleDateString("it-IT", {
           year: "numeric",
           month: "2-digit",
@@ -760,12 +802,10 @@
 
           if (incasso.tipo_incasso === "uscite") {
             if (incasso.tipo_pagamento === "contanti") {
-              totaleCassa -= importo;
               totaleContanti -= importo;
             } else if (incasso.tipo_pagamento === "pos") totalePOS -= importo;
           } else {
             if (incasso.tipo_pagamento === "contanti") {
-              totaleCassa += importo;
               totaleContanti += importo;
             } else if (incasso.tipo_pagamento === "pos") totalePOS += importo;
           }
@@ -780,117 +820,115 @@
           const row = document.createElement("tr");
           row.setAttribute("data-id", incasso.id);
           row.innerHTML = `
-            <tr data-id="${incasso.id}">
+                <tr data-id="${incasso.id}">
 
-              <!-- Colonne in modalità view -->
-              <td class="view">€ ${importo.toFixed(2)}</td>
-              <td class="view">${tipoIncassoFormatted}</td>
-              <td class="view">${tipoPagamentoFormatted}</td>
-              <td class="view">${tipoDocumentoFormatted}</td>
-              <td class="view">${incasso.descrizione}</td>
+                  <!-- Colonne in modalità view -->
+                  <td class="view">€ ${importo.toFixed(2)}</td>
+                  <td class="view">${tipoIncassoFormatted}</td>
+                  <td class="view">${tipoPagamentoFormatted}</td>
+                  <td class="view">${tipoDocumentoFormatted}</td>
+                  <td class="view">${incasso.descrizione}</td>
 
-              <!-- Colonne in modalità edit -->
-              <td class="edit">
-                <div class="input-group input-group-sm">
-                  <div class="input-group-prepend">
-                    <span class="input-group-text text-sm" id="basic-addon1" style="font-size: 0.8rem;">&euro;</span>
-                  </div>
-                  <input type="text" class="form-control form-control-sm"
-                    id="importo${incasso.id}"
-                    placeholder="Inserisci importo" required
-                    oninput="validateImporto(this, true)"
-                    value="${importo.toFixed(2)}" />
-                </div>
-              </td>
+                  <!-- Colonne in modalità edit -->
+                  <td class="edit">
+                    <div class="input-group input-group-sm">
+                      <div class="input-group-prepend">
+                        <span class="input-group-text text-sm" id="basic-addon1" style="font-size: 0.8rem;">&euro;</span>
+                      </div>
+                      <input type="text" class="form-control form-control-sm"
+                        id="importo${incasso.id}"
+                        placeholder="Inserisci importo" required
+                        oninput="validateImporto(this, true)"
+                        value="${importo.toFixed(2)}" />
+                    </div>
+                  </td>
 
-              <!-- Tipo Incasso - Menu a tendina  -->
-              <td class="edit">
-                <select
-                  id="tipoIncasso${incasso.id}"
-                  class="form-control form-control-sm">
-                  <option ${
-                    tipoIncassoFormatted === "Entrate" ? "selected" : ""
-                  }>Entrate</option>
-                  <option ${
-                    tipoIncassoFormatted === "Uscite" ? "selected" : ""
-                  }>Uscite</option>
-                </select>
-              </td>
+                  <!-- Tipo Incasso - Menu a tendina  -->
+                  <td class="edit">
+                    <select
+                      id="tipoIncasso${incasso.id}"
+                      class="form-control form-control-sm">
+                      <option ${
+                        tipoIncassoFormatted === "Entrate" ? "selected" : ""
+                      }>Entrate</option>
+                      <option ${
+                        tipoIncassoFormatted === "Uscite" ? "selected" : ""
+                      }>Uscite</option>
+                    </select>
+                  </td>
 
-              <!-- Tipo Pagamento - Menu a tendina  -->
-              <td class="edit">
-                <select
-                  id="tipoPagamento${incasso.id}"
-                  class="form-control form-control-sm">
-                  <option ${
-                    tipoPagamentoFormatted === "Contanti" ? "selected" : ""
-                  }>Contanti</option>
-                  <option ${
-                    tipoPagamentoFormatted === "POS" ? "selected" : ""
-                  }>POS</option>
-                </select>
-              </td>
+                  <!-- Tipo Pagamento - Menu a tendina  -->
+                  <td class="edit">
+                    <select
+                      id="tipoPagamento${incasso.id}"
+                      class="form-control form-control-sm">
+                      <option ${
+                        tipoPagamentoFormatted === "Contanti" ? "selected" : ""
+                      }>Contanti</option>
+                      <option ${
+                        tipoPagamentoFormatted === "POS" ? "selected" : ""
+                      }>POS</option>
+                    </select>
+                  </td>
 
-              <!-- Tipo Documento - Menu a tendina -->
-              <td class="edit">
-                <select
-                  id="tipoDocumento${incasso.id}"
-                  class="form-control form-control-sm">
-                  <option ${
-                    tipoDocumentoFormatted === "Fattura" ? "selected" : ""
-                  }>Fattura</option>
-                  <option ${
-                    tipoDocumentoFormatted === "Scontrino" ? "selected" : ""
-                  }>Scontrino</option>
-                </select>
-              </td>
-              <td class="edit">
-                <input type="text" class="form-control form-control-sm"
-                  id="descrizione${incasso.id}"
-                  placeholder="Inserire numero pratica"
-                  value="${incasso.descrizione}" />
-              </td>
+                  <!-- Tipo Documento - Menu a tendina -->
+                  <td class="edit">
+                    <select
+                      id="tipoDocumento${incasso.id}"
+                      class="form-control form-control-sm">
+                      <option ${
+                        tipoDocumentoFormatted === "Fattura" ? "selected" : ""
+                      }>Fattura</option>
+                      <option ${
+                        tipoDocumentoFormatted === "Scontrino" ? "selected" : ""
+                      }>Scontrino</option>
+                    </select>
+                  </td>
+                  <td class="edit">
+                    <input type="text" class="form-control form-control-sm"
+                      id="descrizione${incasso.id}"
+                      placeholder="Inserire numero pratica"
+                      value="${incasso.descrizione}" />
+                  </td>
 
-              <!-- Fissi non modificabili -->
-              <td>${incasso.nome_utente || "Non specificato"}</td>
-              <td>${incasso.ora}</td>
+                  <!-- Fissi non modificabili -->
+                  <td>${incasso.nome_utente || "Non specificato"}</td>
+                  <td>${incasso.ora}</td>
 
-              <!-- Icone per Modifica e Elimina in modalità view -->
-              <td class="text-end view">
-                <div style="white-space: nowrap">
-                  ${
-                    isToday && (isOwner || isAdmin)
-                      ? `
-                    <i class="fas fa-edit text-warning me-2"
-                      onclick="modificaIncasso(${incasso.id})"
+                  <!-- Icone per Modifica e Elimina in modalità view -->
+                  <td class="text-end view">
+                    <div style="white-space: nowrap">
+                      ${
+                        isToday && (isOwner || isAdmin)
+                          ? `
+                        <i class="fas fa-edit text-warning me-2"
+                          onclick="modificaIncasso(${incasso.id})"
+                          style="cursor: pointer;"></i>
+                        <i class="fas fa-trash-alt text-danger"
+                          onclick="rimuoviIncasso(${incasso.id})"
+                          style="cursor: pointer;"></i>
+                        `
+                          : ""
+                      }
+                    </div>
+                  </td>
+
+                  <!-- Icone per Salvataggio e Annullamento in modalità edit -->
+                  <td class="text-end edit" style="display:none;">
+                    <i class="fas fa-save text-success me-2"
+                      onclick="salvaModifiche(${incasso.id})"
                       style="cursor: pointer;"></i>
-                    <i class="fas fa-trash-alt text-danger"
-                      onclick="rimuoviIncasso(${incasso.id})"
+                    <i class="fas fa-times text-danger"
+                      onclick="annullaModifiche(${incasso.id})"
                       style="cursor: pointer;"></i>
-                    `
-                      : ""
-                  }
-                </div>
-              </td>
+                  </td>
 
-              <!-- Icone per Salvataggio e Annullamento in modalità edit -->
-              <td class="text-end edit" style="display:none;">
-                <i class="fas fa-save text-success me-2"
-                  onclick="salvaModifiche(${incasso.id})"
-                  style="cursor: pointer;"></i>
-                <i class="fas fa-times text-danger"
-                  onclick="annullaModifiche(${incasso.id})"
-                  style="cursor: pointer;"></i>
-              </td>
-
-            </tr>
-          `;
+                </tr>
+              `;
 
           list.appendChild(row);
         });
 
-        document.getElementById("totale-cassa").innerText =
-          totaleCassa.toFixed(2);
         document.getElementById("totale-contanti").innerText =
           totaleContanti.toFixed(2);
         document.getElementById("totale-pos").innerText = totalePOS.toFixed(2);
@@ -1019,6 +1057,18 @@
           ora: new Date().toLocaleTimeString("it-IT"),
         };
 
+        const row = document.querySelector(`tr[data-id="${id}"]`);
+        if (!row) {
+          console.error(`Riga con ID ${id} non trovata.`);
+          return;
+        }
+
+        const importoOriginale = parseFloat(row.dataset.originalImporto);
+        const tipoIncassoOriginale =
+          row.dataset.originalTipoIncasso.toLowerCase();
+        const tipoPagamentoOriginale =
+          row.dataset.originalTipoPagamento.toLowerCase();
+
         // Invia i dati al server
         fetch(`/api/incassi/${id}`, {
           method: "PUT",
@@ -1035,6 +1085,66 @@
           })
           .then((result) => {
             if (result.success) {
+              if (
+                tipoPagamentoOriginale === "contanti" &&
+                tipoPagamento === "pos"
+              ) {
+                if (tipoIncassoOriginale === "entrate") {
+                  aggiornaTotaleCassa(importoOriginale, "sottrazione");
+                } else if (tipoIncassoOriginale === "uscite") {
+                  aggiornaTotaleCassa(importoOriginale, "somma");
+                }
+              } else if (
+                tipoPagamentoOriginale === "pos" &&
+                tipoPagamento === "contanti"
+              ) {
+                if (tipoIncasso === "entrate") {
+                  aggiornaTotaleCassa(importo, "somma");
+                } else if (tipoIncasso === "uscite") {
+                  aggiornaTotaleCassa(importo, "sottrazione");
+                }
+              } else if (
+                tipoPagamentoOriginale === "contanti" &&
+                tipoPagamento === "contanti"
+              ) {
+                if (tipoIncassoOriginale !== tipoIncasso) {
+                  if (
+                    tipoIncassoOriginale === "entrate" &&
+                    tipoIncasso === "uscite"
+                  ) {
+                    aggiornaTotaleCassa(
+                      importoOriginale + importo,
+                      "sottrazione"
+                    );
+                  } else if (
+                    tipoIncassoOriginale === "uscite" &&
+                    tipoIncasso === "entrate"
+                  ) {
+                    aggiornaTotaleCassa(importoOriginale + importo, "somma");
+                  }
+                } else if (
+                  tipoIncassoOriginale === "entrate" &&
+                  tipoIncasso === "entrate"
+                ) {
+                  const differenza = importo - importoOriginale;
+                  const differenzaAssoluta = Math.abs(differenza);
+                  console.log(differenza, differenzaAssoluta);
+                  aggiornaTotaleCassa(
+                    differenzaAssoluta,
+                    differenza > 0 ? "somma" : "sottrazione"
+                  );
+                } else if (
+                  tipoIncassoOriginale === "uscite" &&
+                  tipoIncasso === "uscite"
+                ) {
+                  const differenza = importo - importoOriginale;
+                  const differenzaAssoluta = Math.abs(differenza);
+                  aggiornaTotaleCassa(
+                    differenzaAssoluta,
+                    differenza > 0 ? "sottrazione" : "somma"
+                  );
+                }
+              }
               alert("Incasso modificato con successo");
               caricaIncassi(
                 new Date()
@@ -1158,6 +1268,19 @@
         if (!confirm("Sei sicuro di voler rimuovere questo incasso?")) {
           return; // Esci se l'utente annulla
         }
+        // Trova la riga corrispondente all'incasso
+        const row = document.querySelector(`tr[data-id="${id}"]`);
+        if (!row) {
+          console.error(`Incasso con ID ${id} non trovato.`);
+          return null;
+        }
+
+        // Recupera i dettagli
+        const importo = parseFloat(
+          row.children[0].innerText.replace("€", "").trim()
+        );
+        const tipoIncasso = row.children[1].innerText.trim();
+        const tipoPagamento = row.children[2].innerText.trim();
 
         fetch(`/api/incassi/${id}`, {
           method: "DELETE",
@@ -1170,6 +1293,13 @@
           })
           .then((result) => {
             if (result.success) {
+              if (tipoPagamento === "Contanti") {
+                if (tipoIncasso === "Entrate") {
+                  aggiornaTotaleCassa(importo, "sottrazione");
+                } else if (tipoIncasso === "Uscite") {
+                  aggiornaTotaleCassa(importo, "somma");
+                }
+              }
               alert("Incasso rimosso con successo");
               caricaIncassi(
                 new Date()
