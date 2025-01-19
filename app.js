@@ -230,8 +230,16 @@ app.put("/api/incassi/:id", async (req, res) => {
 
 // Logout
 app.get("/logout", (req, res) => {
-  req.session.destroy();
-  res.redirect("/login.html");
+  req.session.destroy((err) => {
+    if (err) {
+      console.error("Errore durante il logout:", err);
+      return res
+        .status(500)
+        .json({ success: false, message: "Errore nel logout" });
+    }
+    res.clearCookie("connect.sid"); // Sostituisci con il nome del tuo cookie di sessione se diverso
+    res.json({ success: true });
+  });
 });
 
 // Dashboard (controlla autenticazione)

@@ -17,8 +17,7 @@
       href="https://img.icons8.com/office/100/money-bag-euro.png" />
     <link
       rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
-
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" />
     <style>
       .alert {
         animation: fade-out 3s forwards;
@@ -66,6 +65,30 @@
         height: 31px; /* Uniforma l'altezza */
         line-height: normal; /* Assicura che il testo sia centrato verticalmente */
       }
+
+      .search-box {
+        border: 1px solid #ccc; /* Bordo grigio chiaro */
+        border-radius: 0.5rem; /* Angoli arrotondati */
+        background-color: #f9f9f9; /* Colore di sfondo */
+        cursor: pointer; /* Mostra il puntatore quando si passa sopra */
+        transition: all 0.3s ease; /* Transizione per l'effetto hover */
+      }
+
+      .search-box:hover {
+        background-color: #0d6efd; /* Cambia il colore di sfondo al passaggio */
+        border-color: #0b5ed7; /* Cambia il colore del bordo */
+        color: white; /* Cambia il colore del testo e dell'icona */
+      }
+
+      .search-box i,
+      .search-box .text {
+        transition: color 0.3s ease; /* Effetto di transizione sul colore */
+      }
+
+      .search-box:hover i,
+      .search-box:hover .text {
+        color: white; /* Colore bianco al passaggio */
+      }
     </style>
   </head>
   <body>
@@ -91,6 +114,9 @@
             <span id="user-name" class="text-muted fw-bold"
               >Utente non registrato</span
             >
+            <span id="logout-icon" class="ms-2" style="cursor: pointer">
+              <i class="fa-solid fa-right-from-bracket"></i>
+            </span>
           </div>
         </div>
       </div>
@@ -99,7 +125,13 @@
     <div class="container mt-5">
       <div class="d-flex justify-content-between align-items-center mt-3">
         <h2><span id="current-date"></span></h2>
-        <h2>
+        <div
+          id="search-box"
+          class="search-box d-inline-flex align-items-center p-2 d-none">
+          <i class="fa-solid fa-magnifying-glass me-2"></i>
+          <span class="text">Cerca</span>
+        </div>
+        <h2 id="totale-cassa-container" class="d-none">
           Totale Cassa: €<span id="totale-cassa" class="text-primary"
             >0.00</span
           >
@@ -296,6 +328,34 @@
         // Inizializza il gestore della sessione al caricamento della pagina
         setupSessionTimeoutHandler();
 
+        document
+          .getElementById("logout-icon")
+          .addEventListener("click", function () {
+            // Esegui il logout (eventuale chiamata API)
+            fetch("/logout", {
+              method: "GET",
+              credentials: "include",
+            })
+              .then((response) => {
+                if (!response.ok) {
+                  throw new Error("Errore durante il logout");
+                }
+                return response.json();
+              })
+              .then(() => {
+                // Reindirizza alla pagina di login
+                window.location.href = "/login.html";
+              })
+              .catch((error) => {
+                console.error("Errore durante il logout:", error);
+                alert("Errore durante il logout. Riprova.");
+              });
+          });
+
+        document.querySelector(".search-box").addEventListener("click", () => {
+          alert("Funzione di ricerca non implementata!");
+        });
+
         const tipoIncassoRadios = document.getElementsByName("tipo-incasso");
         const tipoPagamentoRadios =
           document.getElementsByName("tipo-pagamento");
@@ -385,6 +445,16 @@
               document.getElementById(
                 "user-name"
               ).textContent = `Utente registrato: ${userName}`;
+
+              // Mostra il totale cassa solo per gli utenti con potere 1
+              if (userPower === 1) {
+                document
+                  .getElementById("totale-cassa-container")
+                  .classList.remove("d-none");
+                document
+                  .getElementById("search-box")
+                  .classList.remove("d-none"); // Mostra il tasto cerca
+              }
             } else {
               redirectToLogin();
             }
