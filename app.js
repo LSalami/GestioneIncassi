@@ -311,6 +311,42 @@ app.get("/api/totale-cassa", async (req, res) => {
   }
 });
 
+// API per la ricerca degli incassi
+app.get("/api/ricerca-incassi", async (req, res) => {
+  const { anno, descrizione, tipoIncasso, tipoPagamento } = req.query;
+
+  let query = "SELECT * FROM incassi WHERE 1=1";
+  const params = [];
+
+  if (anno) {
+    query += ` AND EXTRACT(YEAR FROM data) = $${params.length + 1}`;
+    params.push(anno);
+  }
+
+  if (descrizione) {
+    query += ` AND descrizione ILIKE $${params.length + 1}`;
+    params.push(`%${descrizione}%`); // Cerca nella descrizione (case-insensitive)
+  }
+
+  if (tipoIncasso) {
+    query += ` AND tipo_incasso = $${params.length + 1}`;
+    params.push(tipoIncasso);
+  }
+
+  if (tipoPagamento) {
+    query += ` AND tipo_pagamento = $${params.length + 1}`;
+    params.push(tipoPagamento);
+  }
+
+  try {
+    const result = await pool.query(query, params);
+    res.json({ success: true, incassi: result.rows });
+  } catch (error) {
+    console.error("Errore durante la ricerca:", error);
+    res.status(500).json({ success: false, message: "Errore del server" });
+  }
+});
+
 // Logout
 app.get("/logout", (req, res) => {
   req.session.destroy((err) => {

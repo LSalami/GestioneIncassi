@@ -302,6 +302,72 @@
       </div>
     </div>
 
+    <div id="search-modal" class="modal fade" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Ricerca Incassi</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Chiudi"></button>
+          </div>
+          <div class="modal-body">
+            <form id="search-form" class="row g-3">
+              <div class="col-md-6">
+                <label for="search-year" class="form-label">Anno</label>
+                <input
+                  type="number"
+                  id="search-year"
+                  class="form-control"
+                  placeholder="Inserisci anno" />
+              </div>
+              <div class="col-md-6">
+                <label for="search-descrizione" class="form-label"
+                  >Descrizione</label
+                >
+                <input
+                  type="text"
+                  id="search-descrizione"
+                  class="form-control"
+                  placeholder="Inserisci descrizione" />
+              </div>
+              <div class="col-md-6">
+                <label for="search-tipo-incasso" class="form-label"
+                  >Tipo Incasso</label
+                >
+                <select id="search-tipo-incasso" class="form-select">
+                  <option value="">Tutti</option>
+                  <option value="entrate">Entrate</option>
+                  <option value="uscite">Uscite</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label for="search-tipo-pagamento" class="form-label"
+                  >Tipo Pagamento</label
+                >
+                <select id="search-tipo-pagamento" class="form-select">
+                  <option value="">Tutti</option>
+                  <option value="contanti">Contanti</option>
+                  <option value="pos">POS</option>
+                </select>
+              </div>
+              <div class="col-12">
+                <button
+                  type="button"
+                  class="btn btn-primary"
+                  id="execute-search">
+                  Cerca
+                </button>
+              </div>
+            </form>
+            <div id="search-results" class="mt-4"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/it.js"></script>
@@ -353,8 +419,26 @@
           });
 
         document.querySelector(".search-box").addEventListener("click", () => {
-          alert("Funzione di ricerca non implementata!");
+          const modalElement = new bootstrap.Modal(
+            document.getElementById("search-modal")
+          );
+          modalElement.show();
         });
+
+        document
+          .querySelector("#search-form")
+          .addEventListener("keydown", (event) => {
+            if (event.key === "Enter") {
+              event.preventDefault(); // Evita il comportamento predefinito del tasto Enter
+              avviaRicerca(); // Chiama la funzione per avviare la ricerca
+            }
+          });
+
+        document
+          .querySelector("#execute-search")
+          .addEventListener("click", () => {
+            avviaRicerca();
+          });
 
         const tipoIncassoRadios = document.getElementsByName("tipo-incasso");
         const tipoPagamentoRadios =
@@ -1445,6 +1529,84 @@
             });
           }
         });
+      }
+
+      function avviaRicerca() {
+        const searchYear = document.querySelector("#search-year").value.trim();
+        const searchDescrizione = document
+          .querySelector("#search-descrizione")
+          .value.trim(); // Elimina spazi extra
+        const searchTipoIncasso = document.querySelector(
+          "#search-tipo-incasso"
+        ).value;
+        const searchTipoPagamento = document.querySelector(
+          "#search-tipo-pagamento"
+        ).value;
+
+        const queryParams = new URLSearchParams({
+          anno: searchYear,
+          descrizione: searchDescrizione,
+          tipoIncasso: searchTipoIncasso,
+          tipoPagamento: searchTipoPagamento,
+        });
+
+        fetch(`/api/ricerca-incassi?${queryParams.toString()}`)
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              visualizzaRisultatiRicerca(data.incassi);
+            } else {
+              console.error("Errore durante la ricerca:", data.message);
+              document.querySelector("#search-results").innerHTML =
+                '<p class="text-danger">Nessun risultato trovato.</p>';
+            }
+          })
+          .catch((error) => {
+            console.error("Errore durante la chiamata API:", error);
+          });
+      }
+
+      function visualizzaRisultatiRicerca(incassi) {
+        const resultsContainer = document.querySelector("#search-results");
+        if (incassi.length === 0) {
+          resultsContainer.innerHTML =
+            '<p class="text-danger">Nessun risultato trovato.</p>';
+          return;
+        }
+
+        let html = `
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Importo (€)</th>
+                <th>Tipo</th>
+                <th>Pagamento</th>
+                <th>Descrizione</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        incassi.forEach((incasso) => {
+          html += `
+            <tr>
+              <td>${new Date(incasso.data).toLocaleDateString("it-IT")}</td>
+              <td>€ ${parseFloat(incasso.importo).toFixed(2)}</td>
+              <td>${
+                tipoIncassoMap[incasso.tipo_incasso] || incasso.tipo_incasso
+              }</td>
+              <td>${
+                tipoPagamentoMap[incasso.tipo_pagamento] ||
+                incasso.tipo_pagamento
+              }</td>
+              <td>${incasso.descrizione}</td>
+            </tr>
+          `;
+        });
+
+        html += "</tbody></table>";
+        resultsContainer.innerHTML = html;
       }
     </script>
   </body>
