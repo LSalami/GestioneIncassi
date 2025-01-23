@@ -432,7 +432,7 @@ function aggiornaTotaleCassa(importo, operazione) {
 
 // Funzione per caricare gli incassi
 function caricaIncassi(date) {
-  fetch(`/api/incassi/${date}`)
+  fetch(`/api/incassi/${date}?timestamp=${new Date().getTime()}`)
     .then((response) => response.json())
     .then((data) => {
       if (data.success) {
@@ -450,7 +450,7 @@ function aggiornaTabellaIncassi(incassi) {
   const list = document.getElementById("incassi-list");
   list.innerHTML = "";
 
-  fetch(`/api/totale-cassa`)
+  fetch(`/api/totale-cassa?timestamp=${new Date().getTime()}`)
     .then((response) => response.json())
     .then((data) => {
       if (data.success) {
@@ -970,7 +970,6 @@ function rimuoviIncasso(id) {
             aggiornaTotaleCassa(importo, "somma");
           }
         }
-        alert("Incasso rimosso con successo");
         caricaIncassi(
           new Date()
             .toLocaleDateString("it-IT", {
@@ -995,11 +994,14 @@ function rimuoviIncasso(id) {
 // Funzioni di Utilità
 // =============================
 
+// Variabile globale per il timer
+let sessionTimer;
+
 // Funzione per resettare il timer
 function resetSessionTimer() {
-  const sessionTimeout = 3600 * 1000; // 1 ora (3600 secondi * 1000)
-  let sessionTimer;
-  // Cancella il timer precedente
+  const sessionTimeout = 180 * 1000; // 5 minuti (180 secondi * 1000)
+
+  // Cancella il timer precedente, se esiste
   if (sessionTimer) {
     clearTimeout(sessionTimer);
   }
@@ -1025,6 +1027,9 @@ function setupSessionTimeoutHandler() {
   // Imposta il primo timer all'avvio
   resetSessionTimer();
 }
+
+// Inizializza il gestore del timeout della sessione
+setupSessionTimeoutHandler();
 
 // Mostra o nasconde il form di inserimento incassi
 function toggleFormVisibility(selectedDate) {

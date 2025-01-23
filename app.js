@@ -2,6 +2,7 @@ const express = require("express");
 const session = require("express-session");
 const bodyParser = require("body-parser");
 const pool = require("./config/database");
+const path = require("path");
 
 const app = express();
 const PORT = 3000;
@@ -26,7 +27,7 @@ app.use(bodyParser.urlencoded({ extended: true })); // Per dati inviati tramite 
 app.use(bodyParser.json()); // Per dati JSON inviati tramite Fetch API o altri client
 
 // Percorso statico per i file HTML e JS
-app.use(express.static("public"));
+app.use(express.static(path.join(__dirname, "public")));
 
 // Middleware per controllare l'autenticazione
 const requireAuth = (req, res, next) => {
@@ -39,23 +40,6 @@ const requireAuth = (req, res, next) => {
 // Rotte
 app.get("/", (req, res) => {
   res.redirect("/login.html");
-});
-
-// Registrazione
-app.post("/register", async (req, res, next) => {
-  const { nome_utente, codice_accesso } = req.body;
-
-  try {
-    const query = `INSERT INTO utenti (nome_utente, codice_accesso) VALUES ($1, $2)`;
-    await pool.query(query, [nome_utente, codice_accesso]);
-    res.redirect("/login.html");
-  } catch (err) {
-    next(
-      new Error(
-        "Errore durante la registrazione. Il nome utente potrebbe essere già registrato."
-      )
-    );
-  }
 });
 
 // Login
@@ -337,6 +321,8 @@ app.get("/api/ricerca-incassi", async (req, res) => {
     query += ` AND tipo_pagamento = $${params.length + 1}`;
     params.push(tipoPagamento);
   }
+
+  query += " ORDER BY id DESC";
 
   try {
     const result = await pool.query(query, params);
