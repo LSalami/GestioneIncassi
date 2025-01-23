@@ -141,14 +141,14 @@ document.addEventListener("DOMContentLoaded", function () {
           document.getElementById("search-box").classList.remove("d-none"); // Mostra il tasto cerca
         }
       } else {
-        redirectToLogin();
+        logout();
       }
     })
     .catch((error) => {
       console.error("Errore durante il caricamento del nome utente:", error);
       document.getElementById("user-name").textContent =
         "Utente non configurato";
-      redirectToLogin();
+      logout();
     });
 
   // Inizializza il gestore della sessione al caricamento della pagina
@@ -976,42 +976,49 @@ function rimuoviIncasso(id) {
 // Funzioni di Utilità
 // =============================
 
-// Variabile globale per il timer
-let sessionTimer;
+function createSessionTimer() {
+  let sessionTimeout = null;
+  let timeRemaining = getCookie("sessionTimeRemaining") || 300; // Tempo in secondi
 
-// Funzione per resettare il timer
-function resetSessionTimer() {
-  const sessionTimeout = 180 * 1000; // 5 minuti (180 secondi * 1000)
+  function startTimer() {
+    clearInterval(sessionTimeout); // Evita duplicati
+    sessionTimeout = setInterval(() => {
+      timeRemaining -= 1; // Decrementa il tempo rimanente
+      setCookie("sessionTimeRemaining", timeRemaining, timeRemaining); // Aggiorna il cookie
 
-  // Cancella il timer precedente, se esiste
-  if (sessionTimer) {
-    clearTimeout(sessionTimer);
+      if (timeRemaining <= 0) {
+        clearInterval(sessionTimeout); // Ferma il timer
+        logout(); // Esegui il logout
+      }
+    }, 1000); // Intervallo di 1 secondo (1000 millisecondi)
+  }
+  function resetTimer() {
+    timeRemaining = 300; // Ripristina il tempo rimanente
+    setCookie("sessionTimeRemaining", timeRemaining, timeRemaining); // Aggiorna il cookie
+    startTimer(); // Riavvia il timer
   }
 
-  // Imposta un nuovo timer
-  sessionTimer = setTimeout(() => {
-    redirectToLogin();
-  }, sessionTimeout);
+  return { startTimer, resetTimer };
 }
 
-// Funzione per reindirizzare al login
-function redirectToLogin() {
-  window.location.href = "/login.html";
-}
+// Crea un'istanza del timer
+const sessionTimer = createSessionTimer();
 
-// Aggiungi gli eventi per rilevare l'attività dell'utente
+// Avvia il timer
+sessionTimer.startTimer();
+
+// =============================
+// Gestore del Timeout della Sessione
+// =============================
 function setupSessionTimeoutHandler() {
-  const events = ["mousemove", "keydown", "click", "scroll", "touchstart"];
+  const events = ["mousemove", "keydown", "click", "scroll"];
   events.forEach((event) => {
-    window.addEventListener(event, resetSessionTimer);
+    window.addEventListener(event, () => sessionTimer.resetTimer()); // Usa il metodo di sessionTimer
   });
 
-  // Imposta il primo timer all'avvio
-  resetSessionTimer();
+  // Avvia il timer all'avvio della pagina
+  sessionTimer.startTimer();
 }
-
-// Inizializza il gestore del timeout della sessione
-setupSessionTimeoutHandler();
 
 function logout() {
   fetch("/logout", {
@@ -1211,6 +1218,7 @@ function setCookie(name, value, seconds) {
   const sameSite = "SameSite=Lax";
   const secure = location.protocol === "https:" ? "Secure" : "";
   document.cookie = `${name}=${value};${expires};${sameSite};${secure};path=/`;
+  console.log(document.cookie);
 }
 
 function getCookie(name) {
