@@ -9,9 +9,9 @@ const tipoDocumentoMapInverse = {
   Scontrino: "scontrino",
 };
 
-let userId = null;
-let userName = null;
-let userPower = null;
+const userId = getCookie("userId");
+const userName = getCookie("userName");
+const userPower = parseInt(getCookie("userPower"), 10) || 0;
 
 // =============================
 // Inizializzazione della Pagina
@@ -21,25 +21,7 @@ document.addEventListener("DOMContentLoaded", function () {
   setupSessionTimeoutHandler();
 
   document.getElementById("logout-icon").addEventListener("click", function () {
-    // Esegui il logout (eventuale chiamata API)
-    fetch("/logout", {
-      method: "GET",
-      credentials: "include",
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Errore durante il logout");
-        }
-        return response.json();
-      })
-      .then(() => {
-        // Reindirizza alla pagina di login
-        window.location.href = "/login.html";
-      })
-      .catch((error) => {
-        console.error("Errore durante il logout:", error);
-        alert("Errore durante il logout. Riprova.");
-      });
+    logout();
   });
 
   document.querySelector(".search-box").addEventListener("click", () => {
@@ -148,9 +130,9 @@ document.addEventListener("DOMContentLoaded", function () {
     })
     .then((data) => {
       if (data.success) {
-        userId = data.userId; // Salva l'ID utente
-        userName = data.userName; // Salva il nome utente
-        userPower = data.userPower; // Salva il livello di potere
+        setCookie("userId", data.userId, 3600);
+        setCookie("userName", data.userName, 3600);
+        setCookie("userPower", data.userPower, 3600);
 
         // Aggiorna l'interfaccia utente con il nome
         document.getElementById(
@@ -1031,6 +1013,35 @@ function setupSessionTimeoutHandler() {
 // Inizializza il gestore del timeout della sessione
 setupSessionTimeoutHandler();
 
+function logout() {
+  fetch("/logout", {
+    method: "GET",
+    credentials: "include",
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Errore durante il logout lato server");
+      }
+      return response.json();
+    })
+    .then(() => {
+      clearClientSession();
+      window.location.href = "/login.html";
+    })
+    .catch((error) => {
+      console.error("Errore durante il logout:", error);
+      alert("Impossibile effettuare il logout. Riprova.");
+    });
+}
+
+// Funzione per pulire i dati di sessione lato client
+function clearClientSession() {
+  deleteCookie("userId");
+  deleteCookie("userName");
+  deleteCookie("userPower");
+  deleteCookie("sessionTimeRemaining");
+}
+
 // Mostra o nasconde il form di inserimento incassi
 function toggleFormVisibility(selectedDate) {
   if (!selectedDate) {
@@ -1187,4 +1198,33 @@ function visualizzaRisultatiRicerca(incassi) {
 
   html += "</tbody></table>";
   resultsContainer.innerHTML = html;
+}
+
+// =============================
+// Funzioni di Gestione Cookies
+// =============================
+
+function setCookie(name, value, seconds) {
+  const date = new Date();
+  date.setTime(date.getTime() + seconds * 1000);
+  const expires = `expires=${date.toUTCString()}`;
+  const sameSite = "SameSite=Lax";
+  const secure = location.protocol === "https:" ? "Secure" : "";
+  document.cookie = `${name}=${value};${expires};${sameSite};${secure};path=/`;
+  console.log("Set cookie:", document.cookie);
+}
+
+function getCookie(name) {
+  const cookieArr = document.cookie.split(";");
+  for (let i = 0; i < cookieArr.length; i++) {
+    const cookie = cookieArr[i].trim();
+    if (cookie.indexOf(name + "=") === 0) {
+      return cookie.substring(name.length + 1);
+    }
+  }
+  return null;
+}
+
+function deleteCookie(name) {
+  document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;`;
 }
