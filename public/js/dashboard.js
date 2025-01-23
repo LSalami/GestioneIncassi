@@ -9,17 +9,11 @@ const tipoDocumentoMapInverse = {
   Scontrino: "scontrino",
 };
 
-const userId = getCookie("userId");
-const userName = getCookie("userName");
-const userPower = parseInt(getCookie("userPower"), 10) || 0;
-
 // =============================
 // Inizializzazione della Pagina
 // =============================
 document.addEventListener("DOMContentLoaded", function () {
-  // Inizializza il gestore della sessione al caricamento della pagina
-  setupSessionTimeoutHandler();
-
+  // Logout
   document.getElementById("logout-icon").addEventListener("click", function () {
     logout();
   });
@@ -137,10 +131,10 @@ document.addEventListener("DOMContentLoaded", function () {
         // Aggiorna l'interfaccia utente con il nome
         document.getElementById(
           "user-name"
-        ).textContent = `Utente registrato: ${userName}`;
+        ).textContent = `Utente registrato: ${data.userName}`;
 
         // Mostra il totale cassa solo per gli utenti con potere 1
-        if (userPower === 1) {
+        if (data.userPower === 1) {
           document
             .getElementById("totale-cassa-container")
             .classList.remove("d-none");
@@ -157,6 +151,8 @@ document.addEventListener("DOMContentLoaded", function () {
       redirectToLogin();
     });
 
+  // Inizializza il gestore della sessione al caricamento della pagina
+  setupSessionTimeoutHandler();
   toggleFormVisibility(formattedToday);
   caricaIncassi(formattedToday);
 });
@@ -314,6 +310,8 @@ function resetFormState(formId) {
 
 // Funzione per salvare l'incasso
 function salvaIncasso() {
+  const userId = getCookie("userId");
+  const userName = getCookie("userName");
   const formData = getFormData(); // Ottieni i dati dal form
   const currentTime = new Date().toLocaleTimeString("it-IT");
   const currentDate = new Date()
@@ -378,19 +376,19 @@ function salvaIncasso() {
 // Genera HTML per il modal di conferma
 function generateConfirmHTML(data) {
   return `
-              <ul>
-                <li><strong>Importo:</strong> € ${data.importo.toFixed(2)}</li>
-                <li><strong>Tipo Incasso:</strong> ${
-                  tipoIncassoMap[data.tipoIncasso]
-                }</li>
-                <li><strong>Tipo Pagamento:</strong> ${
-                  tipoPagamentoMap[data.tipoPagamento]
-                }</li>
-                <li><strong>Tipo Documento:</strong> ${
-                  tipoDocumentoMap[data.tipoDocumento]
-                }</li>
-                <li><strong>Descrizione:</strong> ${data.descrizione}</li>
-              </ul>`;
+    <ul>
+      <li><strong>Importo:</strong> € ${data.importo.toFixed(2)}</li>
+      <li><strong>Tipo Incasso:</strong> ${
+        tipoIncassoMap[data.tipoIncasso]
+      }</li>
+      <li><strong>Tipo Pagamento:</strong> ${
+        tipoPagamentoMap[data.tipoPagamento]
+      }</li>
+      <li><strong>Tipo Documento:</strong> ${
+        tipoDocumentoMap[data.tipoDocumento]
+      }</li>
+      <li><strong>Descrizione:</strong> ${data.descrizione}</li>
+    </ul>`;
 }
 
 // Fuzione per aggiornare il totale cassa
@@ -455,6 +453,8 @@ function aggiornaTabellaIncassi(incassi) {
   });
 
   incassi.forEach((incasso, index) => {
+    const userId = getCookie("userId");
+    const userPower = parseInt(getCookie("userPower"), 10) || 0;
     // Controlla se l'utente ha accesso a questa riga
     const isOwner = incasso.id_operatore === userId; // Verifica se l'utente ha creato l'incasso
     const isAdmin = userPower === 1;
@@ -1211,7 +1211,6 @@ function setCookie(name, value, seconds) {
   const sameSite = "SameSite=Lax";
   const secure = location.protocol === "https:" ? "Secure" : "";
   document.cookie = `${name}=${value};${expires};${sameSite};${secure};path=/`;
-  console.log("Set cookie:", document.cookie);
 }
 
 function getCookie(name) {
