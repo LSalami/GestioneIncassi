@@ -310,7 +310,7 @@ function resetFormState(formId) {
 
 // Funzione per salvare l'incasso
 function salvaIncasso() {
-  const userId = getCookie("userId");
+  const userId = parseInt(getCookie("userId"), 10);
   const userName = getCookie("userName");
   const formData = getFormData(); // Ottieni i dati dal form
   const currentTime = new Date().toLocaleTimeString("it-IT");
@@ -453,7 +453,7 @@ function aggiornaTabellaIncassi(incassi) {
   });
 
   incassi.forEach((incasso, index) => {
-    const userId = getCookie("userId");
+    const userId = parseInt(getCookie("userId"), 10);
     const userPower = parseInt(getCookie("userPower"), 10) || 0;
     // Controlla se l'utente ha accesso a questa riga
     const isOwner = incasso.id_operatore === userId; // Verifica se l'utente ha creato l'incasso

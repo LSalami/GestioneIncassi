@@ -1,26 +1,55 @@
 const express = require("express");
 const session = require("express-session");
 const bodyParser = require("body-parser");
+const Sequelize = require("sequelize");
+const SequelizeStore = require("connect-session-sequelize")(session.Store);
+
 const pool = require("./config/database");
 const path = require("path");
 
 const app = express();
 const PORT = 3000;
 
-// Configurazione sessione
+const sequelize = new Sequelize("gestioneincassi", "admin", "admin", {
+  host: "localhost",
+  dialect: "postgres",
+  logging: false,
+});
+
+// Configurazione store delle sessioni
+const sessionStore = new SequelizeStore({
+  db: sequelize,
+  tableName: "sessions", // Tabella per le sessioni
+  checkExpirationInterval: 60 * 1000, // Controllo ogni minuto
+  expiration: 60 * 60 * 1000, // Durata di 60 minuti per le sessioni
+});
+
 app.use(
   session({
-    secret: "chiave-segreta", // Cambiare in produzione con una chiave complessa
+    store: sessionStore,
+    secret: "chiave-segreta",
     resave: false,
-    saveUninitialized: false, // Non crea sessioni non necessarie
+    saveUninitialized: false,
     cookie: {
-      secure: false, // Impostare su true in produzione con HTTPS
+      secure: false,
       httpOnly: true, // Impedisce accessi JavaScript ai cookie
-      maxAge: 3600 * 1000, // Scadenza della sessione (1 ora)
-      rolling: true, // Ogni richiesta rinnova la sessione
+      sameSite: "strict",
+      maxAge: 3600 * 1000, // 1 ora
     },
   })
 );
+
+// Sincronizzazione della tabella delle sessioni
+(async () => {
+  try {
+    await sequelize.authenticate();
+    console.log("Connessione al database riuscita.");
+    await sessionStore.sync(); // Crea o aggiorna la tabella delle sessioni
+    console.log("Tabella delle sessioni sincronizzata.");
+  } catch (error) {
+    console.error("Errore durante la connessione al database:", error);
+  }
+})();
 
 // Configurazione Body Parser
 app.use(bodyParser.urlencoded({ extended: true })); // Per dati inviati tramite moduli HTML
