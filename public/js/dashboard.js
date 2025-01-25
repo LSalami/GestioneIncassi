@@ -465,6 +465,7 @@ function aggiornaTabellaIncassi(incassi) {
     }
 
     const importo = parseFloat(incasso.importo);
+    const importoColor = incasso.tipo_incasso === "uscite" ? "text-danger" : "text-success";
     const incassoDate = new Date(incasso.data).toLocaleDateString("it-IT", {
       year: "numeric",
       month: "2-digit",
@@ -493,9 +494,8 @@ function aggiornaTabellaIncassi(incassi) {
     row.setAttribute("data-id", incasso.id);
     row.innerHTML = `
       <tr data-id="${incasso.id}">
-
         <!-- Colonne in modalità view -->
-        <td class="view">€ ${importo.toFixed(2)}</td>
+        <td class="view ${importoColor}">€ ${importo.toFixed(2)}</td>
         <td class="view">${tipoIncassoFormatted}</td>
         <td class="view">${tipoPagamentoFormatted}</td>
         <td class="view">${tipoDocumentoFormatted}</td>
