@@ -13,6 +13,23 @@ const tipoDocumentoMapInverse = {
 // Inizializzazione della Pagina
 // =============================
 document.addEventListener("DOMContentLoaded", function () {
+  if (!getCookie("userId")) {
+    window.location.href = "/login.html";
+  }
+
+  // Aggiorna l'interfaccia utente con il nome
+  document.getElementById(
+    "user-name"
+  ).textContent = `Utente registrato: ${getCookie("userName")}`;
+
+  // Mostra il totale cassa solo per gli utenti con potere 1
+  if (parseInt(getCookie("userPower"), 10) === 1) {
+    document
+      .getElementById("totale-cassa-container")
+      .classList.remove("d-none");
+    document.getElementById("search-box").classList.remove("d-none"); // Mostra il tasto cerca
+  }
+
   // Logout
   document.getElementById("logout-icon").addEventListener("click", function () {
     logout();
@@ -114,42 +131,6 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     },
   });
-
-  fetch("/api/utente")
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error("Non autenticato");
-      }
-      return response.json();
-    })
-    .then((data) => {
-      if (data.success) {
-        setCookie("userId", data.userId, 3600);
-        setCookie("userName", data.userName, 3600);
-        setCookie("userPower", data.userPower, 3600);
-
-        // Aggiorna l'interfaccia utente con il nome
-        document.getElementById(
-          "user-name"
-        ).textContent = `Utente registrato: ${data.userName}`;
-
-        // Mostra il totale cassa solo per gli utenti con potere 1
-        if (data.userPower === 1) {
-          document
-            .getElementById("totale-cassa-container")
-            .classList.remove("d-none");
-          document.getElementById("search-box").classList.remove("d-none"); // Mostra il tasto cerca
-        }
-      } else {
-        logout();
-      }
-    })
-    .catch((error) => {
-      console.error("Errore durante il caricamento del nome utente:", error);
-      document.getElementById("user-name").textContent =
-        "Utente non configurato";
-      logout();
-    });
 
   // Inizializza il gestore della sessione al caricamento della pagina
   setupSessionTimeoutHandler();
@@ -393,6 +374,7 @@ function generateConfirmHTML(data) {
 
 // Fuzione per aggiornare il totale cassa
 function aggiornaTotaleCassa(importo, operazione) {
+  if (importo === 0) return;
   fetch("/api/aggiorna-totale-cassa", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
@@ -465,7 +447,8 @@ function aggiornaTabellaIncassi(incassi) {
     }
 
     const importo = parseFloat(incasso.importo);
-    const importoColor = incasso.tipo_incasso === "uscite" ? "text-danger" : "text-success";
+    const importColor =
+      incasso.tipo_incasso === "uscite" ? "text-danger" : "text-success";
     const incassoDate = new Date(incasso.data).toLocaleDateString("it-IT", {
       year: "numeric",
       month: "2-digit",
@@ -494,8 +477,9 @@ function aggiornaTabellaIncassi(incassi) {
     row.setAttribute("data-id", incasso.id);
     row.innerHTML = `
       <tr data-id="${incasso.id}">
+
         <!-- Colonne in modalità view -->
-        <td class="view ${importoColor}">€ ${importo.toFixed(2)}</td>
+        <td class="view ${importColor}">€ ${importo.toFixed(2)}</td>
         <td class="view">${tipoIncassoFormatted}</td>
         <td class="view">${tipoPagamentoFormatted}</td>
         <td class="view">${tipoDocumentoFormatted}</td>
@@ -790,7 +774,6 @@ function salvaModifiche(id) {
           ) {
             const differenza = importo - importoOriginale;
             const differenzaAssoluta = Math.abs(differenza);
-            console.log(differenza, differenzaAssoluta);
             aggiornaTotaleCassa(
               differenzaAssoluta,
               differenza > 0 ? "somma" : "sottrazione"
@@ -1218,7 +1201,6 @@ function setCookie(name, value, seconds) {
   const sameSite = "SameSite=Lax";
   const secure = location.protocol === "https:" ? "Secure" : "";
   document.cookie = `${name}=${value};${expires};${sameSite};${secure};path=/`;
-  console.log(document.cookie);
 }
 
 function getCookie(name) {

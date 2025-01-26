@@ -22,6 +22,7 @@ const sessionStore = new SequelizeStore({
   tableName: "sessions", // Tabella per le sessioni
   checkExpirationInterval: 60 * 1000, // Controllo ogni minuto
   expiration: 60 * 60 * 1000, // Durata di 60 minuti per le sessioni
+  disableTouch: true,
 });
 
 app.use(
@@ -35,6 +36,7 @@ app.use(
       httpOnly: true, // Impedisce accessi JavaScript ai cookie
       sameSite: "strict",
       maxAge: 3600 * 1000, // 1 ora
+      domain: "",
     },
   })
 );
@@ -43,9 +45,7 @@ app.use(
 (async () => {
   try {
     await sequelize.authenticate();
-    console.log("Connessione al database riuscita.");
     await sessionStore.sync(); // Crea o aggiorna la tabella delle sessioni
-    console.log("Tabella delle sessioni sincronizzata.");
   } catch (error) {
     console.error("Errore durante la connessione al database:", error);
   }
@@ -87,14 +87,37 @@ app.post("/login", async (req, res) => {
     }
 
     const { id, nome_utente, livello_potere } = result.rows[0];
-    req.session.userId = id; // Salva l'ID utente nella sessione
-    req.session.userName = nome_utente; // Salva il nome utente nella sessione
-    req.session.userPower = livello_potere; // Salva il livello di potere dell'utente nella sessione
 
-    // Risposta JSON con reindirizzamento alla dashboard
-    res.json({
-      success: true,
-      redirect: "/dashboard.html",
+    await sessionStore.destroy(req.session.id);
+
+    req.session.regenerate(async (err) => {
+      if (err) {
+        return res
+          .status(500)
+          .json({ success: false, message: "Errore del server" });
+      }
+      req.session.userId = id; // Salva l'ID utente nella sessione
+      req.session.userName = nome_utente; // Salva il nome utente nella sessione
+      req.session.userPower = livello_potere; // Salva il livello di potere dell'utente nella sessione
+      await req.session.save();
+
+      // Aggiunta di header anti-cache
+      res.set({
+        "Cache-Control": "no-store, no-cache, must-revalidate, private",
+        Pragma: "no-cache",
+        Expires: "0",
+      });
+
+      // Risposta JSON con reindirizzamento alla dashboard
+      res.json({
+        success: true,
+        redirect: "/dashboard.html",
+        user: {
+          userId: id,
+          userName: nome_utente,
+          userPower: livello_potere,
+        },
+      });
     });
   } catch (error) {
     console.error("Errore durante il login:", error);
@@ -364,15 +387,27 @@ app.get("/api/ricerca-incassi", async (req, res) => {
 
 // Logout
 app.get("/logout", (req, res) => {
-  req.session.destroy((err) => {
+  req.session.destroy(async (err) => {
     if (err) {
       console.error("Errore durante il logout:", err);
       return res
         .status(500)
         .json({ success: false, message: "Errore nel logout" });
     }
-    res.clearCookie("connect.sid"); // Sostituisci con il nome del tuo cookie di sessione se diverso
-    res.json({ success: true });
+    try {
+      await sessionStore.destroy(req.sessionID); // Elimina dal database
+      res.clearCookie("connect.sid"); // Cancella il cookie di sessione
+      res.json({ success: true });
+    } catch (dbErr) {
+      console.error(
+        "Errore durante la rimozione della sessione dal database:",
+        dbErr
+      );
+      res.status(500).json({
+        success: false,
+        message: "Errore durante la rimozione della sessione",
+      });
+    }
   });
 });
 
@@ -382,20 +417,6 @@ app.use(
   requireAuth,
   express.static("public/dashboard.html")
 );
-
-// Ritorna l'utente dalla sessione
-app.get("/api/utente", (req, res) => {
-  if (!req.session.userId) {
-    return res.status(401).json({ success: false, message: "Non autenticato" });
-  }
-
-  res.json({
-    success: true,
-    userId: req.session.userId,
-    userName: req.session.userName,
-    userPower: req.session.userPower,
-  });
-});
 
 // Middleware per gestire gli errori
 app.use((err, req, res, next) => {
@@ -408,6 +429,13 @@ app.use((err, req, res, next) => {
       <a href="/">Torna alla Home</a>
     `);
   }
+});
+
+app.use((req, res, next) => {
+  if (!req.session.clientId) {
+    req.session.clientId = Date.now() + Math.random().toString(36);
+  }
+  next();
 });
 
 // Avvio server

@@ -3,7 +3,6 @@ window.addEventListener("load", function () {
   const continueButton = document.querySelector("#submit");
   const errorModalElement = document.getElementById("error-modal");
   const errorModal = new bootstrap.Modal(errorModalElement);
-  const userDisplay = document.getElementById("user-name");
   const inputs = Array.from(loginContainer.querySelectorAll("input"));
 
   // Funzione per resettare gli input
@@ -12,13 +11,6 @@ window.addEventListener("load", function () {
       input.value = ""; // Resetta i valori degli input
     });
     inputs[0].focus(); // Riporta il focus al primo input
-  };
-
-  // Funzione per aggiornare l'utente registrato
-  const aggiornaUtenteRegistrato = (nomeUtente) => {
-    if (userDisplay) {
-      userDisplay.textContent = `Utente registrato: ${nomeUtente}`;
-    }
   };
 
   // Funzione per gestire il login
@@ -39,9 +31,14 @@ window.addEventListener("load", function () {
       })
       .then((data) => {
         if (data.success) {
-          console.log("Login riuscito!");
-          aggiornaUtenteRegistrato(data.nomeUtente); // Aggiorna il nome dell'utente registrato
-          window.location.href = data.redirect || "/dashboard"; // Reindirizza alla dashboard
+          // Aggiorna i cookie con i dettagli dell'utente
+          const { userId, userName, userPower } = data.user;
+          setCookie("userId", userId, 3600); // Cookie valido per 1 ora
+          setCookie("userName", userName, 3600);
+          setCookie("userPower", userPower, 3600);
+
+          // Reindirizza alla dashboard
+          window.location.href = data.redirect || "/dashboard.html"; // Reindirizza alla dashboard
         } else {
           resetInputs(); // Cancella i valori degli input in caso di errore
           errorModal.show();
@@ -120,3 +117,25 @@ window.addEventListener("load", function () {
   //Focus sul primo input all'avvio
   inputs[0].focus();
 });
+
+function setCookie(name, value, seconds) {
+  const date = new Date();
+  date.setTime(date.getTime() + seconds * 1000);
+  const expires = `expires=${date.toUTCString()}`;
+  document.cookie = `${name}=${value};${expires};path=/;SameSite=Strict`;
+}
+
+function getCookie(name) {
+  const cookieArr = document.cookie.split("; ");
+  for (const cookie of cookieArr) {
+    const [key, val] = cookie.split("=");
+    if (key === name) {
+      return val;
+    }
+  }
+  return null;
+}
+
+function deleteCookie(name) {
+  document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;`;
+}
