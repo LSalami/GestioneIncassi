@@ -349,14 +349,23 @@ app.get("/api/totale-cassa", async (req, res) => {
 
 // API per la ricerca degli incassi
 app.get("/api/ricerca-incassi", async (req, res) => {
-  const { anno, descrizione, tipoIncasso, tipoPagamento } = req.query;
+  const { dataDa, dataA, descrizione, tipoIncasso, tipoPagamento } = req.query;
 
   let query = "SELECT * FROM incassi WHERE 1=1";
   const params = [];
 
-  if (anno) {
-    query += ` AND EXTRACT(YEAR FROM data) = $${params.length + 1}`;
-    params.push(anno);
+  // Filtro per intervallo di date
+  if (dataDa && dataA) {
+    query += ` AND data BETWEEN $${params.length + 1} AND $${
+      params.length + 2
+    }`;
+    params.push(dataDa, dataA);
+  } else if (dataDa) {
+    query += ` AND data >= $${params.length + 1}`;
+    params.push(dataDa);
+  } else if (dataA) {
+    query += ` AND data <= $${params.length + 1}`;
+    params.push(dataA);
   }
 
   if (descrizione) {

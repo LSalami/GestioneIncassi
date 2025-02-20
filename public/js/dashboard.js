@@ -55,11 +55,20 @@ document.addEventListener("DOMContentLoaded", function () {
     avviaRicerca();
   });
 
-  const searchYearInput = document.getElementById("search-year");
-  if (searchYearInput) {
-    const currentYear = new Date().getFullYear();
-    searchYearInput.value = currentYear;
-  }
+  // Inizializza i due selettori di data per la ricerca
+  flatpickr("#search-date-from", {
+    altInput: true, // Mostra il formato alternativo all'utente
+    altFormat: "l, d M Y", // Formato: Giovedì, 20 Feb 2025
+    dateFormat: "Y-m-d", // Formato usato internamente (utile per inviare al backend)
+    locale: "it",
+  });
+
+  flatpickr("#search-date-to", {
+    altInput: true,
+    altFormat: "l, d M Y",
+    dateFormat: "Y-m-d",
+    locale: "it",
+  });
 
   const tipoIncassoRadios = document.getElementsByName("tipo-incasso");
   const tipoPagamentoRadios = document.getElementsByName("tipo-pagamento");
@@ -136,6 +145,13 @@ document.addEventListener("DOMContentLoaded", function () {
   setupSessionTimeoutHandler();
   toggleFormVisibility(formattedToday);
   caricaIncassi(formattedToday);
+
+  const searchModal = document.getElementById("search-modal");
+  if (searchModal) {
+    searchModal.addEventListener("hidden.bs.modal", function () {
+      resetSearchModalFields();
+    });
+  }
 });
 
 // =============================
@@ -1114,7 +1130,10 @@ function aggiungiEventiSelect() {
 }
 
 function avviaRicerca() {
-  const searchYear = document.querySelector("#search-year").value.trim();
+  const searchDateFrom = document
+    .querySelector("#search-date-from")
+    .value.trim();
+  const searchDateTo = document.querySelector("#search-date-to").value.trim();
   const searchDescrizione = document
     .querySelector("#search-descrizione")
     .value.trim(); // Elimina spazi extra
@@ -1126,7 +1145,8 @@ function avviaRicerca() {
   ).value;
 
   const queryParams = new URLSearchParams({
-    anno: searchYear,
+    dataDa: searchDateFrom,
+    dataA: searchDateTo,
     descrizione: searchDescrizione,
     tipoIncasso: searchTipoIncasso,
     tipoPagamento: searchTipoPagamento,
@@ -1188,6 +1208,33 @@ function visualizzaRisultatiRicerca(incassi) {
 
   html += "</tbody></table>";
   resultsContainer.innerHTML = html;
+}
+
+// Funzione per resettare i campi del modal di ricerca
+function resetSearchModalFields() {
+  const searchModal = document.getElementById("search-modal");
+  if (!searchModal) return;
+
+  // Seleziona tutti gli input e textarea e resetta i valori
+  const inputs = searchModal.querySelectorAll("input, textarea, select");
+  inputs.forEach((input) => {
+    if (input.type === "checkbox" || input.type === "radio") {
+      input.checked = false;
+    } else {
+      input.value = ""; // Svuota il campo
+    }
+
+    // Reset per i campi gestiti da Flatpickr
+    if (input._flatpickr) {
+      input._flatpickr.clear(); // Pulisce il campo
+    }
+  });
+
+  // Pulisce i risultati di ricerca se presenti
+  const searchResults = searchModal.querySelector("#search-results");
+  if (searchResults) {
+    searchResults.innerHTML = "";
+  }
 }
 
 // =============================
